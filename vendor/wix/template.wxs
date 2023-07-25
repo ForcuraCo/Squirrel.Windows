@@ -5,10 +5,10 @@
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A later version of this product is already installed. Setup will now exit."/>
     <Media Id="1" Cabinet="contents.cab" EmbedCab="yes" CompressionLevel="high"/>
 
-    <PropertyRef Id="WIX_IS_NETFRAMEWORK_462_OR_LATER_INSTALLED" />
+    <PropertyRef Id="NETFRAMEWORK45" />
 
     <Condition Message="This application requires .NET Framework 4.6.2 or higher. Please install the latest .NET Framework then run this installer again.">
-      <![CDATA[Installed OR WIX_IS_NETFRAMEWORK_462_OR_LATER_INSTALLED]]>
+      <![CDATA[Installed OR (NETFRAMEWORK45 >= "#394802")]]>
     </Condition>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
@@ -19,7 +19,7 @@
 
     <DirectoryRef Id="APPLICATIONROOTDIRECTORY">
       <Component Id="{{Id}}.exe" Guid="{{IdAsGuid2}}" Win64="{{Win64YesNo}}">
-        <File Id="{{Id}}.exe" Name="{{Id}}DeploymentTool.exe" Source="./Setup.exe" KeyPath="yes"/>
+        <File Id="{{Id}}.exe" Name="{{Id}}DeploymentTool.exe" Source="{{SetupExecutable}}" KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
