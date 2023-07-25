@@ -49,6 +49,11 @@ namespace Squirrel.Update
                 { "updateSelf=", "Copy the currently executing Update.exe into the default location", v => { updateAction =  UpdateAction.UpdateSelf; target = v; } },
                 { "processStart=", "Start an executable in the latest version of the app package", v => { updateAction =  UpdateAction.ProcessStart; processStart = v; }, true},
                 { "processStartAndWait=", "Start an executable in the latest version of the app package", v => { updateAction =  UpdateAction.ProcessStart; processStart = v; shouldWait = true; }, true},
+
+                // electron-builder specific
+                { "releasifyElectronBuilder=", "Update or generate a releases directory with a given NuGet package - for electron-builder usage", v => { updateAction = UpdateAction.ReleasifyElectronBuilder; target = v; } },
+                { "createMsiElectronBuilder=", "Create an MSI for Sys Admin usage - for electron-builder usage", v => { updateAction = UpdateAction.CreateMsiElectronBuilder; target = v;  } },
+
                 "",
                 "Options:",
                 { "h|?|help", "Display Help and exit", _ => {} },
