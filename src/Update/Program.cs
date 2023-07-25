@@ -498,6 +498,7 @@ namespace Squirrel.Update
                 { "Author", company },
                 { "Version", Regex.Replace(package.Version.ToString(), @"-.*$", "") },
                 { "Summary", package.Summary ?? package.Description ?? package.Id },
+                { "SetupExecutable", setupExe },
                 { "Codepage", $"{culture}" },
                 { "Platform", packageAs64Bit ? "x64" : "x86" },
                 { "ProgramFilesFolder", packageAs64Bit ? "ProgramFiles64Folder" : "ProgramFilesFolder" },
