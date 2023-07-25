@@ -18,7 +18,7 @@ namespace Squirrel.Update
 {
     enum UpdateAction {
         Unset = 0, Install, Uninstall, Download, Update, Releasify, Shortcut,
-        Deshortcut, ProcessStart, UpdateSelf, CheckForUpdate
+        Deshortcut, ProcessStart, UpdateSelf, CheckForUpdate, ReleasifyElectronBuilder, CreateMsiElectronBuilder
     }
 
     class Program : IEnableLogger
@@ -43,9 +43,9 @@ namespace Squirrel.Update
             try {
                 opt = new StartupOption(args);
             } catch (Exception ex) {
-                using (var logger = new SetupLogLogger(true, "OptionParsing") { Level = LogLevel.Info }) {
-                    SquirrelLocator.CurrentMutable.Register(() => logger, typeof(Squirrel.SimpleSplat.ILogger));
-                    logger.Write($"Failed to parse command line options. {ex.Message}", LogLevel.Error);
+                using (var exLogger = new SetupLogLogger(true, "OptionParsing") { Level = LogLevel.Info }) {
+                    SquirrelLocator.CurrentMutable.Register(() => exLogger, typeof(Squirrel.SimpleSplat.ILogger));
+                    exLogger.Write($"Failed to parse command line options. {ex.Message}", LogLevel.Error);
                 }
                 throw;
             }
@@ -54,15 +54,25 @@ namespace Squirrel.Update
             // open will actually crash the uninstaller
             bool isUninstalling = opt.updateAction == UpdateAction.Uninstall;
 
-            using (var logger = new SetupLogLogger(isUninstalling, opt.updateAction.ToString()) {Level = LogLevel.Info}) {
-                SquirrelLocator.CurrentMutable.Register(() => logger, typeof (SimpleSplat.ILogger));
+            SimpleSplat.ILogger logger;
+            if (!Enumerable.Any(args, (string x) => ((string)(object)x).StartsWith("--releasifyElectronBuilder") || ((string)(object)x).StartsWith("--createMsiElectronBuilder")))
+            {
+                logger = new SetupLogLogger(isUninstalling, opt.updateAction.ToString()) { Level = LogLevel.Info };
+            }
+            else
+            {
+                logger = new ConsoleLogger();
+            }
 
-                try {
-                    return executeCommandLine(args);
-                } catch (Exception ex) {
-                    logger.Write("Finished with unhandled exception: " + ex, LogLevel.Fatal);
-                    throw;
-                }
+            try {
+                SquirrelLocator.CurrentMutable.Register(() => logger, typeof(SimpleSplat.ILogger));
+                return executeCommandLine(args);
+            } catch (Exception ex) {
+                logger.Write("Finished with unhandled exception: " + ex, LogLevel.Fatal);
+                throw;
+            }
+            finally {
+                (logger as IDisposable)?.Dispose();
             }
         }
 
@@ -133,6 +143,14 @@ namespace Squirrel.Update
 #endif
                 case UpdateAction.Releasify:
                     Releasify(opt.target, opt.releaseDir, opt.packagesDir, opt.bootstrapperExe, opt.backgroundGif, opt.signingParameters, opt.baseUrl, opt.setupIcon, !opt.noMsi, opt.packageAs64Bit, opt.frameworkVersion, !opt.noDelta);
+                    break;
+
+                case UpdateAction.ReleasifyElectronBuilder:
+                    ReleasifyElectronBuilder(opt.target, opt.releaseDir, opt.baseUrl);
+                    break;
+
+                case UpdateAction.CreateMsiElectronBuilder:
+                    createMsiElectronBuilder(opt.bootstrapperExe, new ZipPackage(opt.target), opt.packageAs64Bit);
                     break;
                 }
             }
@@ -425,6 +443,77 @@ namespace Squirrel.Update
                     signPEFile(targetSetupExe.Replace(".exe", ".msi"), signingOpts).Wait();
                 }
             }
+        }
+
+        private static void ReleasifyElectronBuilder(string package, string targetDir = null, string baseUrl = null)
+        {
+            new ZipPackage(package).GetType();
+            if (baseUrl != null)
+            {
+                if (!Utility.IsHttpUrl(baseUrl))
+                {
+                    throw new Exception("Invalid --baseUrl '" + baseUrl + "'. A base URL must start with http or https and be a valid URI.");
+                }
+                if (!((string)(object)baseUrl).EndsWith("/"))
+                {
+                    baseUrl += "/";
+                }
+            }
+            targetDir = targetDir ?? Path.Combine(".", "Releases");
+            DirectoryInfo directoryInfo = new DirectoryInfo(targetDir);
+            string path = Path.Combine(directoryInfo.FullName, "RELEASES");
+            List<ReleaseEntry> list = new List<ReleaseEntry>();
+            if (File.Exists(path))
+            {
+                list.AddRange(ReleaseEntry.ParseReleaseFile(File.ReadAllText(path, Encoding.UTF8)));
+            }
+            List<string> list2 = new List<string>();
+            ReleasePackage releasePackage = new ReleasePackage(package, isReleasePackage: true);
+            list2.Add(package);
+            ReleasePackage previousRelease = ReleaseEntry.GetPreviousRelease(list, releasePackage, targetDir);
+            if (previousRelease != null)
+            {
+                ReleasePackage releasePackage2 = new DeltaPackageBuilder().CreateDeltaPackage(previousRelease, releasePackage, Path.Combine(directoryInfo.FullName, ((string)(object)releasePackage.SuggestedReleaseFileName).Replace("full", "delta")));
+                list2.Insert(0, releasePackage2.InputPackageFile);
+            }
+            List<ReleaseEntry> newReleaseEntries = list2.Select((string packageFilename) => ReleaseEntry.GenerateFromFile(packageFilename, baseUrl)).ToList();
+            List<ReleaseEntry> list3 = list.Where((ReleaseEntry x) => !newReleaseEntries.Select((ReleaseEntry e) => e.Version).Contains(x.Version)).Concat(newReleaseEntries).ToList();
+            ReleaseEntry.WriteReleaseFile(list3, path);
+            ReleaseEntry releaseEntry = list3.MaxBy((ReleaseEntry x) => x.Version).First((ReleaseEntry x) => !x.IsDelta);
+            Console.Out.WriteLine(ReleaseEntry.GenerateFromFile(Path.Combine(directoryInfo.FullName, releaseEntry.Filename)).EntryAsString);
+        }
+
+        private static void createMsiElectronBuilder(string setupExe, IPackage package, bool packageAs64Bit)
+        {
+            var pathToWix = pathToWixTools();
+            var setupExeDir = Path.GetDirectoryName(setupExe);
+            string template = File.ReadAllText(Path.Combine(pathToWix, "template.wxs"));
+            var company = String.Join(",", package.Authors);
+
+            var culture = CultureInfo.GetCultureInfo(package.Language ?? "").TextInfo.ANSICodePage;
+
+            var templateData = new Dictionary<string, string> {
+                { "Id", package.Id },
+                { "Title", package.Title },
+                { "Author", company },
+                { "Version", Regex.Replace(package.Version.ToString(), @"-.*$", "") },
+                { "Summary", package.Summary ?? package.Description ?? package.Id },
+                { "Codepage", $"{culture}" },
+                { "Platform", packageAs64Bit ? "x64" : "x86" },
+                { "ProgramFilesFolder", packageAs64Bit ? "ProgramFiles64Folder" : "ProgramFilesFolder" },
+                { "Win64YesNo", packageAs64Bit ? "yes" : "no" }
+            };
+
+            // NB: We need some GUIDs that are based on the package ID, but unique (i.e.
+            // "Unique but consistent").
+            for (int i = 1; i <= 10; i++)
+            {
+                templateData[String.Format("IdAsGuid{0}", i)] = Utility.CreateGuidFromHash(String.Format("{0}:{1}", package.Id, i)).ToString();
+            }
+
+            var templateResult = CopStache.Render(template, templateData);
+            var wxsTarget = Path.Combine(setupExeDir, "Setup.wxs");
+            File.WriteAllText(wxsTarget, templateResult, Encoding.UTF8);
         }
 
         public void Shortcut(string exeName, string shortcutArgs, string processStartArgs, string icon, bool onlyUpdate)
