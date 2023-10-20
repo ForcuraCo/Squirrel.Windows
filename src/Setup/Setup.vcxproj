@@ -103,6 +103,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="FxHelper.h" />
+    <ClInclude Include="Logger.h" />
     <ClInclude Include="MachineInstaller.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Setup.h" />
@@ -113,6 +114,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FxHelper.cpp" />
+    <ClCompile Include="Logger.cpp" />
     <ClCompile Include="MachineInstaller.cpp" />
     <ClCompile Include="unzip.cpp" />
     <ClCompile Include="UpdateRunner.cpp" />

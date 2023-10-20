@@ -2,6 +2,7 @@
 #include "unzip.h"
 #include "Resource.h"
 #include "UpdateRunner.h"
+#include "Logger.h"
 #include <vector>
 
 void CUpdateRunner::DisplayErrorMessage(CString& errorMessage, wchar_t* logFile)
@@ -15,7 +16,8 @@ void CUpdateRunner::DisplayErrorMessage(CString& errorMessage, wchar_t* logFile)
 	// TODO: Something about contacting support?
 	if (logFile == NULL) {
 		dlg.SetButtons(&buttons[1], 1, 1);
-	} else {
+	}
+	else {
 		dlg.SetButtons(buttons, 2, 1);
 	}
 
@@ -62,7 +64,7 @@ out:
 	return hr;
 }
 
-HRESULT FindDesktopFolderView(REFIID riid, void **ppv)
+HRESULT FindDesktopFolderView(REFIID riid, void** ppv)
 {
 	HRESULT hr;
 
@@ -93,7 +95,7 @@ HRESULT FindDesktopFolderView(REFIID riid, void **ppv)
 	return S_OK;
 }
 
-HRESULT GetDesktopAutomationObject(REFIID riid, void **ppv)
+HRESULT GetDesktopAutomationObject(REFIID riid, void** ppv)
 {
 	HRESULT hr;
 
@@ -136,15 +138,15 @@ bool CUpdateRunner::DirectoryExists(wchar_t* szPath)
 		(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
-bool CUpdateRunner::DirectoryIsWritable(wchar_t * szPath)
+bool CUpdateRunner::DirectoryIsWritable(wchar_t* szPath)
 {
-		wchar_t szTempFileName[MAX_PATH];
-		UINT uRetVal = GetTempFileNameW(szPath, L"Squirrel", 0, szTempFileName);
-		if (uRetVal == 0) {
-			return false;
-		}
-		DeleteFile(szTempFileName);
-		return true;
+	wchar_t szTempFileName[MAX_PATH];
+	UINT uRetVal = GetTempFileNameW(szPath, L"Squirrel", 0, szTempFileName);
+	if (uRetVal == 0) {
+		return false;
+	}
+	DeleteFile(szTempFileName);
+	return true;
 }
 
 int CUpdateRunner::ExtractUpdaterAndRun(wchar_t* lpCommandLine, bool useFallbackDir)
@@ -193,7 +195,7 @@ gotADir:
 	wcscat_s(targetDir, _countof(targetDir), L"\\SquirrelTemp");
 
 	if (!CreateDirectory(targetDir, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
-		wchar_t err[4096];
+		wchar_t err[1024];
 		_swprintf_c(err, _countof(err), L"Unable to write to %s - IT policies may be restricting access to this folder", targetDir);
 
 		if (useFallbackDir) {
@@ -205,14 +207,24 @@ gotADir:
 
 	swprintf_s(logFile, L"%s\\SquirrelSetup.log", targetDir);
 
+	wchar_t logLine[1024];
+	swprintf_s(logLine, L"Writing to dir: %s", targetDir);
+	CLogger::Log(logFile, "info:", logLine);
+
+	CLogger::Log(logFile, "info:", L"Extracting resources");
+
 	if (!zipResource.Load(L"DATA", IDR_UPDATE_ZIP)) {
+		CLogger::Log(logFile, "error:", L"Failed extracting resources for setup");
 		goto failedExtract;
 	}
 
 	DWORD dwSize = zipResource.GetSize();
 	if (dwSize < 0x100) {
+		CLogger::Log(logFile, "error:", L"Extracted resources too small, failing");
 		goto failedExtract;
 	}
+
+	CLogger::Log(logFile, "info:", L"Unzipping resources");
 
 	BYTE* pData = (BYTE*)zipResource.Lock();
 	HZIP zipFile = OpenZip(pData, dwSize, NULL);
@@ -242,11 +254,14 @@ gotADir:
 	CloseZip(zipFile);
 	zipResource.Release();
 
+	CLogger::Log(logFile, "info:", L"Unzip complete");
+
 	// nfi if the zip extract actually worked, check for Update.exe
 	wchar_t updateExePath[MAX_PATH];
 	swprintf_s(updateExePath, L"%s\\%s", targetDir, L"Update.exe");
 
 	if (GetFileAttributes(updateExePath) == INVALID_FILE_ATTRIBUTES) {
+		CLogger::Log(logFile, "error:", L"Unable to find Update.exe path");
 		goto failedExtract;
 	}
 
@@ -262,7 +277,12 @@ gotADir:
 	wchar_t cmd[MAX_PATH];
 	swprintf_s(cmd, L"\"%s\" --install . %s", updateExePath, lpCommandLine);
 
+	wchar_t createProcessLogLine[1024];
+	swprintf_s(createProcessLogLine, L"Starting process with args %s", cmd);
+	CLogger::Log(logFile, "info:", createProcessLogLine);
+
 	if (!CreateProcess(NULL, cmd, NULL, NULL, false, 0, NULL, targetDir, &si, &pi)) {
+		CLogger::Log(logFile, "error:", L"Failed to start process");
 		goto failedExtract;
 	}
 
@@ -274,6 +294,7 @@ gotADir:
 	}
 
 	if (dwExitCode != 0) {
+		CLogger::Log(logFile, "error:", L"There was an error while installing the application");
 		DisplayErrorMessage(CString(
 			L"There was an error while installing the application. "
 			L"Check the setup log for more information and contact the author."), logFile);
@@ -285,14 +306,16 @@ gotADir:
 
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
-	return (int) dwExitCode;
+	return (int)dwExitCode;
 
 failedExtract:
 	if (!useFallbackDir) {
+		CLogger::Log(logFile, "info:", L"Attempting another pass at installing using fallbackDir in %ProgramData%");
 		// Take another pass at it, using C:\ProgramData instead
 		return ExtractUpdaterAndRun(lpCommandLine, true);
 	}
 
+	CLogger::Log(logFile, "error:", L"Failed to extract installer");
 	DisplayErrorMessage(CString(L"Failed to extract installer"), NULL);
-	return (int) dwExitCode;
+	return (int)dwExitCode;
 }
