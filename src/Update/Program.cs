@@ -492,8 +492,14 @@ namespace Squirrel.Update
 
             var culture = CultureInfo.GetCultureInfo(package.Language ?? "").TextInfo.ANSICodePage;
 
+            // WiX Identifiers may contain ASCII characters A-Z, a-z, digits, underscores (_), or
+            // periods(.). Every identifier must begin with either a letter or an underscore.
+            var wixId = Regex.Replace(package.Id, @"[^\w\.]", "_");
+            if (Char.GetUnicodeCategory(wixId[0]) == UnicodeCategory.DecimalDigitNumber)
+                wixId = "_" + wixId;
+
             var templateData = new Dictionary<string, string> {
-                { "Id", package.Id },
+                { "Id", wixId },
                 { "Title", package.Title },
                 { "Author", company },
                 { "Version", Regex.Replace(package.Version.ToString(), @"-.*$", "") },
@@ -777,10 +783,16 @@ namespace Squirrel.Update
 
             var culture = CultureInfo.GetCultureInfo(package.Language ?? "").TextInfo.ANSICodePage;
 
-
             var templateText = File.ReadAllText(Path.Combine(pathToWix, "template.wxs"));
+
+            // WiX Identifiers may contain ASCII characters A-Z, a-z, digits, underscores (_), or
+            // periods(.). Every identifier must begin with either a letter or an underscore.
+            var wixId = Regex.Replace(package.Id, @"[^\w\.]", "_");
+            if (Char.GetUnicodeCategory(wixId[0]) == UnicodeCategory.DecimalDigitNumber)
+                wixId = "_" + wixId;
+
             var templateData = new Dictionary<string, string> {
-                { "Id", package.Id },
+                { "Id", wixId },
                 { "Title", package.Title },
                 { "Author", company },
                 { "Version", Regex.Replace(package.Version.ToString(), @"-.*$", "") },
