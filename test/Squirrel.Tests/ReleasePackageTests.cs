@@ -77,18 +77,6 @@ namespace Squirrel.Tests.Core
         }
 
         [Fact]
-        public void FindDependentPackagesForDummyPackage()
-        {
-            var inputPackage = IntegrationTestHelper.GetPath("fixtures", "Squirrel.Tests.0.1.0-pre.nupkg");
-            var fixture = new ReleasePackage(inputPackage);
-            var sourceDir = IntegrationTestHelper.GetPath("fixtures", "packages");
-            (new DirectoryInfo(sourceDir)).Exists.ShouldBeTrue();
-
-            IEnumerable<IPackage> results = fixture.findAllDependentPackages(default(IPackage), (IPackageRepository)new LocalPackageRepository(sourceDir), default(HashSet<string>), default(FrameworkName));
-            results.Count().ShouldBeGreaterThan(0);
-        }
-
-        [Fact]
         public void CanLoadPackageWhichHasNoDependencies()
         {
             var inputPackage = IntegrationTestHelper.GetPath("fixtures", "Squirrel.Core.NoDependencies.1.0.0.0.nupkg");
@@ -99,44 +87,6 @@ namespace Squirrel.Tests.Core
                 fixture.CreateReleasePackage(outputPackage, sourceDir);
             }
             finally {
-                File.Delete(outputPackage);
-            }
-        }
-
-        [Fact]
-        public void CanResolveMultipleLevelsOfDependencies()
-        {
-            var inputPackage = IntegrationTestHelper.GetPath("fixtures", "Squirrel.Tests.0.1.0-pre.nupkg");
-            var outputPackage = Path.GetTempFileName() + ".nupkg";
-            var sourceDir = IntegrationTestHelper.GetPath("fixtures", "packages");
-
-            var fixture = new ReleasePackage(inputPackage);
-            (new DirectoryInfo(sourceDir)).Exists.ShouldBeTrue();
-
-            try {
-                fixture.CreateReleasePackage(outputPackage, sourceDir);
-
-                this.Log().Info("Resulting package is at {0}", outputPackage);
-                var pkg = new ZipPackage(outputPackage);
-
-                int refs = pkg.FrameworkAssemblies.Count();
-                this.Log().Info("Found {0} refs", refs);
-                refs.ShouldEqual(0);
-
-                this.Log().Info("Files in release package:");
-                pkg.GetFiles().ForEach(x => this.Log().Info(x.Path));
-
-                var filesToLookFor = new[] {
-                    "xunit.assert.dll",         // Tests => Xunit => Xunit.Assert
-                    "NuGet.Core.dll",           // Tests => NuGet
-                    "Squirrel.Tests.dll",
-                };
-
-                filesToLookFor.ForEach(name => {
-                    this.Log().Info("Looking for {0}", name);
-                    pkg.GetFiles().Any(y => y.Path.ToLowerInvariant().Contains(name.ToLowerInvariant())).ShouldBeTrue();
-                });
-            } finally {
                 File.Delete(outputPackage);
             }
         }

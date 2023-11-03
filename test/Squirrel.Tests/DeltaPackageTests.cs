@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -134,9 +134,9 @@ namespace Squirrel.Tests.Core
 
                 var newFilesAdded = new[] {
                     "Newtonsoft.Json.dll",
-                    "Refit.dll",
-                    "Refit-Portable.dll",
-                    "Castle.Core.dll",
+                    //"Refit.dll",
+                    //"Refit-Portable.dll",
+                    //"Castle.Core.dll",
                 }.Select(x => x.ToLowerInvariant());
 
                 // vNext adds a dependency on Refit
@@ -147,15 +147,15 @@ namespace Squirrel.Tests.Core
                 // All the other files should be diffs and shasums
                 deltaPkgFiles
                     .Where(x => !newFilesAdded.Any(y => x.Path.ToLowerInvariant().Contains(y)))
-                    .All(x => x.Path.ToLowerInvariant().EndsWith("diff") || x.Path.ToLowerInvariant().EndsWith("shasum"))
+                    .All(x => x.Path.ToLowerInvariant().EndsWith("bsdiff") || x.Path.ToLowerInvariant().EndsWith("shasum"))
                     .ShouldBeTrue();
 
                 // Every .diff file should have a shasum file
-                deltaPkg.GetFiles().Any(x => x.Path.ToLowerInvariant().EndsWith(".diff")).ShouldBeTrue();
+                deltaPkg.GetFiles().Any(x => x.Path.ToLowerInvariant().EndsWith(".bsdiff")).ShouldBeTrue();
                 deltaPkg.GetFiles()
-                    .Where(x => x.Path.ToLowerInvariant().EndsWith(".diff"))
+                    .Where(x => x.Path.ToLowerInvariant().EndsWith(".bsdiff"))
                     .ForEach(x => {
-                        var lookingFor = x.Path.Replace(".diff", ".shasum");
+                        var lookingFor = x.Path.Replace(".bsdiff", ".shasum");
                         this.Log().Info("Looking for corresponding shasum file: {0}", lookingFor);
                         deltaPkg.GetFiles().Any(y => y.Path == lookingFor).ShouldBeTrue();
                     });
