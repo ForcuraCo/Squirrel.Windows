@@ -140,7 +140,7 @@ namespace Squirrel
             await Task.Run(() => File.Copy(from, to, true));
         }
 
-        public static void Retry(this Action block, int retries = 2)
+        public static void Retry(this Action block, int retries = 4, int retryDelay = 250)
         {
             Contract.Requires(retries > 0);
 
@@ -149,10 +149,10 @@ namespace Squirrel
                 return null;
             };
 
-            thunk.Retry(retries);
+            thunk.Retry(retries, retryDelay);
         }
 
-        public static T Retry<T>(this Func<T> block, int retries = 2)
+        public static T Retry<T>(this Func<T> block, int retries = 4, int retryDelay = 250)
         {
             Contract.Requires(retries > 0);
 
@@ -166,7 +166,7 @@ namespace Squirrel
                     }
 
                     retries--;
-                    Thread.Sleep(250);
+                    Thread.Sleep(retryDelay);
                 }
             }
         }

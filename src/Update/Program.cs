@@ -16,7 +16,8 @@ using System.Threading.Tasks;
 
 namespace Squirrel.Update
 {
-    enum UpdateAction {
+    enum UpdateAction
+    {
         Unset = 0, Install, Uninstall, Download, Update, Releasify, Shortcut,
         Deshortcut, ProcessStart, UpdateSelf, CheckForUpdate, ReleasifyElectronBuilder, CreateMsiElectronBuilder
     }
@@ -55,12 +56,9 @@ namespace Squirrel.Update
             bool isUninstalling = opt.updateAction == UpdateAction.Uninstall;
 
             SimpleSplat.ILogger logger;
-            if (!Enumerable.Any(args, (string x) => ((string)(object)x).StartsWith("--releasifyElectronBuilder") || ((string)(object)x).StartsWith("--createMsiElectronBuilder")))
-            {
+            if (!Enumerable.Any(args, (string x) => ((string) (object) x).StartsWith("--releasifyElectronBuilder") || ((string) (object) x).StartsWith("--createMsiElectronBuilder"))) {
                 logger = new SetupLogLogger(isUninstalling, opt.updateAction.ToString()) { Level = LogLevel.Info };
-            }
-            else
-            {
+            } else {
                 logger = new ConsoleLogger();
             }
 
@@ -70,8 +68,7 @@ namespace Squirrel.Update
             } catch (Exception ex) {
                 logger.Write("Finished with unhandled exception: " + ex, LogLevel.Fatal);
                 throw;
-            }
-            finally {
+            } finally {
                 (logger as IDisposable)?.Dispose();
             }
         }
@@ -370,8 +367,7 @@ namespace Squirrel.Update
                         .Where(x => Utility.IsFileTopLevelInPackage(x.FullName, pkgPath))
                         .Where(x => Utility.ExecutableUsesWin32Subsystem(x.FullName))
                         .ToArray() // materialize the IEnumerable so we never end up creating stubs for stubs
-                        .ForEachAsync(x => createExecutableStubForExe(x.FullName))
-                        .Wait();
+                        .ForEach(x => createExecutableStubForExe(x.FullName));
 
                     if (signingOpts == null) return;
 
@@ -449,14 +445,11 @@ namespace Squirrel.Update
         private static void ReleasifyElectronBuilder(string package, string targetDir = null, string baseUrl = null)
         {
             new ZipPackage(package).GetType();
-            if (baseUrl != null)
-            {
-                if (!Utility.IsHttpUrl(baseUrl))
-                {
+            if (baseUrl != null) {
+                if (!Utility.IsHttpUrl(baseUrl)) {
                     throw new Exception("Invalid --baseUrl '" + baseUrl + "'. A base URL must start with http or https and be a valid URI.");
                 }
-                if (!((string)(object)baseUrl).EndsWith("/"))
-                {
+                if (!((string) (object) baseUrl).EndsWith("/")) {
                     baseUrl += "/";
                 }
             }
@@ -464,17 +457,15 @@ namespace Squirrel.Update
             DirectoryInfo directoryInfo = new DirectoryInfo(targetDir);
             string path = Path.Combine(directoryInfo.FullName, "RELEASES");
             List<ReleaseEntry> list = new List<ReleaseEntry>();
-            if (File.Exists(path))
-            {
+            if (File.Exists(path)) {
                 list.AddRange(ReleaseEntry.ParseReleaseFile(File.ReadAllText(path, Encoding.UTF8)));
             }
             List<string> list2 = new List<string>();
             ReleasePackage releasePackage = new ReleasePackage(package, isReleasePackage: true);
             list2.Add(package);
             ReleasePackage previousRelease = ReleaseEntry.GetPreviousRelease(list, releasePackage, targetDir);
-            if (previousRelease != null)
-            {
-                ReleasePackage releasePackage2 = new DeltaPackageBuilder().CreateDeltaPackage(previousRelease, releasePackage, Path.Combine(directoryInfo.FullName, ((string)(object)releasePackage.SuggestedReleaseFileName).Replace("full", "delta")));
+            if (previousRelease != null) {
+                ReleasePackage releasePackage2 = new DeltaPackageBuilder().CreateDeltaPackage(previousRelease, releasePackage, Path.Combine(directoryInfo.FullName, ((string) (object) releasePackage.SuggestedReleaseFileName).Replace("full", "delta")));
                 list2.Insert(0, releasePackage2.InputPackageFile);
             }
             List<ReleaseEntry> newReleaseEntries = list2.Select((string packageFilename) => ReleaseEntry.GenerateFromFile(packageFilename, baseUrl)).ToList();
@@ -514,8 +505,7 @@ namespace Squirrel.Update
 
             // NB: We need some GUIDs that are based on the package ID, but unique (i.e.
             // "Unique but consistent").
-            for (int i = 1; i <= 10; i++)
-            {
+            for (int i = 1; i <= 10; i++) {
                 templateData[String.Format("IdAsGuid{0}", i)] = Utility.CreateGuidFromHash(String.Format("{0}:{1}", package.Id, i)).ToString();
             }
 
@@ -562,7 +552,7 @@ namespace Squirrel.Update
                 ShowHelp();
                 return;
             }
-            
+
             // Find the latest installed version's app dir
             var appDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var releases = ReleaseEntry.ParseReleaseFile(
@@ -727,20 +717,30 @@ namespace Squirrel.Update
 #endif
         }
 
-        async Task createExecutableStubForExe(string fullName)
+        void createExecutableStubForExe(string fullName)
         {
-            var exe = Utility.FindHelperExecutable(@"StubExecutable.exe");
+            try {
+                var exe = Utility.FindHelperExecutable(@"StubExecutable.exe");
 
-            var target = Path.Combine(
-                Path.GetDirectoryName(fullName),
-                Path.GetFileNameWithoutExtension(fullName) + "_ExecutionStub.exe");
+                var target = Path.Combine(
+                    Path.GetDirectoryName(fullName),
+                    Path.GetFileNameWithoutExtension(fullName) + "_ExecutionStub.exe");
 
-            await Utility.CopyToAsync(exe, target);
+                Utility.Retry(() => File.Copy(exe, target, true));
 
-            await Utility.InvokeProcessAsync(
-                Utility.FindHelperExecutable("WriteZipToSetup.exe"),
-                String.Format("--copy-stub-resources \"{0}\" \"{1}\"", fullName, target),
-                CancellationToken.None);
+
+                Utility.Retry(() => {
+                    // cancel after 2 minutes, should be able to finish well beyond then
+                    using (var tokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(120))) {
+                        Utility.InvokeProcessAsync(
+                            Utility.FindHelperExecutable("WriteZipToSetup.exe"),
+                            String.Format("--copy-stub-resources \"{0}\" \"{1}\"", fullName, target),
+                            tokenSource.Token).Wait();
+                    }
+                });
+            } catch (Exception ex) {
+                this.Log().ErrorException($"Error creating StubExecutable and copying resources for '{fullName}'. This stub may or may not work properly.", ex);
+            }
         }
 
         static async Task setPEVersionInfoAndIcon(string exePath, IPackage package, string iconPath = null)
@@ -806,7 +806,7 @@ namespace Squirrel.Update
 
             // NB: We need some GUIDs that are based on the package ID, but unique (i.e.
             // "Unique but consistent").
-            for (int i=1; i <= 10; i++) {
+            for (int i = 1; i <= 10; i++) {
                 templateData[String.Format("IdAsGuid{0}", i)] = Utility.CreateGuidFromHash(String.Format("{0}:{1}", package.Id, i)).ToString();
             }
 
@@ -880,7 +880,7 @@ namespace Squirrel.Update
                 var args = shortcutArgs.Split(new[] { ',' });
 
                 foreach (var arg in args) {
-                    var location = (ShortcutLocation)(Enum.Parse(typeof(ShortcutLocation), arg, false));
+                    var location = (ShortcutLocation) (Enum.Parse(typeof(ShortcutLocation), arg, false));
                     if (ret.HasValue) {
                         ret |= location;
                     } else {
@@ -927,7 +927,7 @@ namespace Squirrel.Update
 
         public SetupLogLogger(bool saveInTemp, string commandSuffix = null)
         {
-            for (int i=0; i < 10; i++) {
+            for (int i = 0; i < 10; i++) {
                 try {
                     var dir = saveInTemp ?
                         Path.GetTempPath() :
