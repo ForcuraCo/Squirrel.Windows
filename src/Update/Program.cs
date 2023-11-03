@@ -421,16 +421,9 @@ namespace Squirrel.Update
             var writeZipToSetup = Utility.FindHelperExecutable("WriteZipToSetup.exe");
 
             try {
-                List<string> arguments = new List<string>() {
-                    targetSetupExe,
-                    zipPath
-                };
-                if (!String.IsNullOrWhiteSpace(frameworkVersion)) {
-                    arguments.Add("--set-required-framework");
-                    arguments.Add(frameworkVersion);
-                }
+                var arguments = String.Format("\"{0}\" \"{1}\" \"--set-required-framework\" \"{2}\"", targetSetupExe, zipPath, frameworkVersion);
                 var result = Utility.InvokeProcessAsync(writeZipToSetup, arguments, CancellationToken.None).Result;
-                if (result.ExitCode != 0) throw new Exception("Failed to write Zip to Setup.exe!\n\n" + result.StdOutput);
+                if (result.Item1 != 0) throw new Exception("Failed to write Zip to Setup.exe!\n\n" + result.Item2);
             } catch (Exception ex) {
                 this.Log().ErrorException("Failed to update Setup.exe with new Zip file", ex);
             } finally {
@@ -725,10 +718,9 @@ namespace Squirrel.Update
             }
 
             var processResult = await Utility.InvokeProcessAsync(exe,
-                new string[] { "sign", signingOpts, exePath },
-                CancellationToken.None);
+                String.Format("sign {0} \"{1}\"", signingOpts, exePath), CancellationToken.None);
 
-            if (processResult.ExitCode != 0) {
+            if (processResult.Item1 != 0) {
                 var optsWithPasswordHidden = new Regex(@"(?x)                    #ignore pattern white space so we can leave comments
                     (?i)                #ignore case
                     (?<=/p\s+)          #positive look behind for /p that is followed by white space(s)
@@ -741,7 +733,7 @@ namespace Squirrel.Update
 
                 throw new Exception(msg);
             } else {
-                Console.WriteLine(processResult.StdOutput);
+                Console.WriteLine(processResult.Item2);
             }
         }
         bool isPEFileSigned(string path)
@@ -770,7 +762,7 @@ namespace Squirrel.Update
 
             await Utility.InvokeProcessAsync(
                 Utility.FindHelperExecutable("WriteZipToSetup.exe"),
-                new string[] { "--copy-stub-resources", fullName, target },
+                String.Format("--copy-stub-resources \"{0}\" \"{1}\"", fullName, target),
                 CancellationToken.None);
         }
 
@@ -778,34 +770,32 @@ namespace Squirrel.Update
         {
             var realExePath = Path.GetFullPath(exePath);
             var company = String.Join(",", package.Authors);
-
-            List<string> args = new List<string>() {
-                realExePath,
-                "--set-version-string", "CompanyName", company,
-                "--set-version-string", "LegalCopyright", package.Copyright ?? "Copyright © " + DateTime.Now.Year.ToString() + " " + company,
-                "--set-version-string", "FileDescription", package.Summary ?? package.Description ?? "Installer for " + package.Id,
-                "--set-version-string", "ProductName", package.Description ?? package.Summary ?? package.Id,
-                "--set-file-version", package.Version.ToString(),
-                "--set-product-version", package.Version.ToString(),
+            var verStrings = new Dictionary<string, string>() {
+                { "CompanyName", company },
+                { "LegalCopyright", package.Copyright ?? "Copyright © " + DateTime.Now.Year.ToString() + " " + company },
+                { "FileDescription", package.Summary ?? package.Description ?? "Installer for " + package.Id },
+                { "ProductName", package.Description ?? package.Summary ?? package.Id },
             };
 
+            var args = verStrings.Aggregate(new StringBuilder("\"" + realExePath + "\""), (acc, x) => { acc.AppendFormat(" --set-version-string \"{0}\" \"{1}\"", x.Key, x.Value); return acc; });
+            args.AppendFormat(" --set-file-version {0} --set-product-version {0}", package.Version.ToString());
             if (iconPath != null) {
-                args.Add("--set-icon");
-                args.Add(Path.GetFullPath(iconPath));
+                args.AppendFormat(" --set-icon \"{0}\"", Path.GetFullPath(iconPath));
             }
 
             // Try to find rcedit.exe
             string exe = Utility.FindHelperExecutable("rcedit.exe");
-            var processResult = await Utility.InvokeProcessAsync(exe, args, CancellationToken.None);
 
-            if (processResult.ExitCode != 0) {
+            var processResult = await Utility.InvokeProcessAsync(exe, args.ToString(), CancellationToken.None);
+
+            if (processResult.Item1 != 0) {
                 var msg = String.Format(
                     "Failed to modify resources, command invoked was: '{0} {1}'\n\nOutput was:\n{2}",
-                    exe, args, processResult.StdOutput);
+                    exe, args, processResult.Item2);
 
                 throw new Exception(msg);
             } else {
-                Console.WriteLine(processResult.StdOutput);
+                Console.WriteLine(processResult.Item2);
             }
         }
 
@@ -843,27 +833,25 @@ namespace Squirrel.Update
             File.WriteAllText(wxsTarget, templateResult, Encoding.UTF8);
 
             var candleParams = String.Format("-nologo -ext WixNetFxExtension -out \"{0}\" \"{1}\"", wxsTarget.Replace(".wxs", ".wixobj"), wxsTarget);
-            var processResult = await Utility.InvokeProcessUnsafeAsync(
-                Utility.CreateProcessStartInfo(
-                    Path.Combine(pathToWix, "candle.exe"), candleParams, setupExeDir), CancellationToken.None);
+            var processResult = await Utility.InvokeProcessAsync(
+                Path.Combine(pathToWix, "candle.exe"), candleParams, CancellationToken.None, setupExeDir);
 
-            if (processResult.ExitCode != 0) {
+            if (processResult.Item1 != 0) {
                 var msg = String.Format(
                     "Failed to compile WiX template, command invoked was: '{0} {1}'\n\nOutput was:\n{2}",
-                    "candle.exe", candleParams, processResult.StdOutput);
+                    "candle.exe", candleParams, processResult.Item2);
 
                 throw new Exception(msg);
             }
 
             var lightParams = String.Format("-ext WixNetFxExtension -sval -out \"{0}\" \"{1}\"", wxsTarget.Replace(".wxs", ".msi"), wxsTarget.Replace(".wxs", ".wixobj"));
-            processResult = await Utility.InvokeProcessUnsafeAsync(
-                Utility.CreateProcessStartInfo(
-                    Path.Combine(pathToWix, "light.exe"), lightParams, setupExeDir), CancellationToken.None);
+            processResult = await Utility.InvokeProcessAsync(
+                Path.Combine(pathToWix, "light.exe"), lightParams, CancellationToken.None, setupExeDir);
 
-            if (processResult.ExitCode != 0) {
+            if (processResult.Item1 != 0) {
                 var msg = String.Format(
                     "Failed to link WiX template, command invoked was: '{0} {1}'\n\nOutput was:\n{2}",
-                    "light.exe", lightParams, processResult.StdOutput);
+                    "light.exe", lightParams, processResult.Item2);
 
                 throw new Exception(msg);
             }
