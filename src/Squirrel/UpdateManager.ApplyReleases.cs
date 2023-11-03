@@ -129,7 +129,7 @@ namespace Squirrel
                         if (squirrelAwareApps.Count > 0) {
                             await squirrelAwareApps.ForEachAsync(async exe => {
                                 using (var cts = new CancellationTokenSource()) { 
-                                    cts.CancelAfter(10 * 1000);
+                                    cts.CancelAfter(15 * 1000);
 
                                     try {
                                         await Utility.InvokeProcessAsync(exe, String.Format("--squirrel-uninstall {0}", version), cts.Token);
