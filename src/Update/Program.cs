@@ -555,7 +555,7 @@ namespace Squirrel.Update
                 ShowHelp();
                 return;
             }
-
+            
             // Find the latest installed version's app dir
             var appDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var releases = ReleaseEntry.ParseReleaseFile(
