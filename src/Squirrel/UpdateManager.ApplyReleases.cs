@@ -132,7 +132,7 @@ namespace Squirrel
                                     cts.CancelAfter(15 * 1000);
 
                                     try {
-                                        await Utility.InvokeProcessAsync(exe, String.Format("--squirrel-uninstall {0}", version), cts.Token);
+                                        await Utility.InvokeProcessAsync(exe, new string[] { "--squirrel-uninstall", version.ToString() }, cts.Token);
                                     } catch (Exception ex) {
                                         this.Log().ErrorException("Failed to run cleanup hook, continuing: " + exe, ex);
                                     }
@@ -415,9 +415,8 @@ namespace Squirrel
             async Task invokePostInstall(SemanticVersion currentVersion, bool isInitialInstall, bool firstRunOnly, bool silentInstall)
             {
                 var targetDir = getDirectoryForRelease(currentVersion);
-                var args = isInitialInstall ?
-                    String.Format("--squirrel-install {0}", currentVersion) :
-                    String.Format("--squirrel-updated {0}", currentVersion);
+                var command = isInitialInstall ? "--squirrel-install" : "--squirrel-updated";
+                var args = new string[] { command, currentVersion.ToString() };
 
                 var squirrelApps = SquirrelAwareExecutableDetector.GetAllSquirrelAwareApps(targetDir.FullName);
 
@@ -614,7 +613,7 @@ namespace Squirrel
                 if (forceUninstall == false) {
                     await toCleanup.ForEachAsync(async x => {
                         var squirrelApps = SquirrelAwareExecutableDetector.GetAllSquirrelAwareApps(x.FullName);
-                        var args = String.Format("--squirrel-obsolete {0}", x.Name.Replace("app-", ""));
+                        var args = new string[] { "--squirrel-obsolete", x.Name.Replace("app-", "") };
 
                         if (squirrelApps.Count > 0) {
                             // For each app, run the install command in-order and wait
