@@ -74,6 +74,12 @@ namespace Squirrel
                     } finally {
                         File.Delete(targetPng);
                     }
+                } else {
+                    // DisplayIcon can be a path to an exe instead of an ico.
+                    var appDir = new DirectoryInfo(Utility.AppDirForRelease(rootAppDirectory, latest));
+                    var appIconExe = SquirrelAwareExecutableDetector.GetAllSquirrelAwareApps(appDir.FullName).FirstOrDefault()
+                        ?? appDir.GetFiles("*.exe").Select(x => x.FullName).FirstOrDefault();
+                    key.SetValue("DisplayIcon", appIconExe, RegistryValueKind.String);
                 }
 
                 var stringsToWrite = new[] {
