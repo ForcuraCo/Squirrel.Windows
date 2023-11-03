@@ -39,41 +39,19 @@ namespace Squirrel
                 // Download the icon and PNG => ICO it. If this doesn't work, who cares
                 var pkgPath = Path.Combine(rootAppDirectory, "packages", latest.Filename);
                 var zp = new ZipPackage(pkgPath);
-                    
+
                 var targetPng = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".png");
                 var targetIco = Path.Combine(rootAppDirectory, "app.ico");
 
                 // NB: Sometimes the Uninstall key doesn't exist
                 using (var parentKey =
                     RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default)
-                        .CreateSubKey("Uninstall", RegistryKeyPermissionCheck.ReadWriteSubTree)) { ; }
+                        .CreateSubKey("Uninstall", RegistryKeyPermissionCheck.ReadWriteSubTree)) {; }
 
                 var key = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default)
                     .CreateSubKey(uninstallRegSubKey + "\\" + applicationName, RegistryKeyPermissionCheck.ReadWriteSubTree);
-
-                if (zp.IconUrl != null && !File.Exists(targetIco)) {
-                    try {
-                        using (var wc = Utility.CreateWebClient()) { 
-                            await wc.DownloadFileTaskAsync(zp.IconUrl, targetPng);
-                            using (var fs = new FileStream(targetIco, FileMode.Create)) {
-                                if (zp.IconUrl.AbsolutePath.EndsWith("ico")) {
-                                    var bytes = File.ReadAllBytes(targetPng);
-                                    fs.Write(bytes, 0, bytes.Length);
-                                } else {
-                                    using (var bmp = (Bitmap)Image.FromFile(targetPng))
-                                    using (var ico = Icon.FromHandle(bmp.GetHicon())) {
-                                        ico.Save(fs);
-                                    }
-                                }
-
-                                key.SetValue("DisplayIcon", targetIco, RegistryValueKind.String);
-                            }
-                        }
-                    } catch(Exception ex) {
-                        this.Log().InfoException("Couldn't write uninstall icon, don't care", ex);
-                    } finally {
-                        File.Delete(targetPng);
-                    }
+                if (!await ResolveAppIconFromUrl(zp, targetPng, targetIco, key)) {
+                    ResolveAppIconFromExecutable(latest, key);
                 }
 
                 var stringsToWrite = new[] {
@@ -104,6 +82,53 @@ namespace Squirrel
                 return key;
             }
 
+            private bool ResolveAppIconFromExecutable(ReleaseEntry latest, RegistryKey key)
+            {
+                try {
+                    // DisplayIcon can be a path to an exe instead of an ico.
+                    var appDir = new DirectoryInfo(Utility.AppDirForRelease(rootAppDirectory, latest));
+                    var appIconExe = SquirrelAwareExecutableDetector.GetAllSquirrelAwareApps(appDir.FullName).FirstOrDefault()
+                        ?? appDir.GetFiles("*.exe").Select(x => x.FullName).FirstOrDefault();
+                    key.SetValue("DisplayIcon", appIconExe, RegistryValueKind.String);
+                } catch (Exception ex) {
+                    this.Log().InfoException("Couldn't write uninstall icon, don't care", ex);
+                    return false;
+                }
+
+                return true;
+            }
+
+            private async Task<bool> ResolveAppIconFromUrl(ZipPackage zp, string targetPng, string targetIco, RegistryKey key)
+            {
+                bool success = false;
+                if (zp.IconUrl != null && !File.Exists(targetIco)) {
+                    try {
+                        using (var wc = Utility.CreateWebClient()) {
+                            await wc.DownloadFileTaskAsync(zp.IconUrl, targetPng);
+                            using (var fs = new FileStream(targetIco, FileMode.Create)) {
+                                if (zp.IconUrl.AbsolutePath.EndsWith("ico")) {
+                                    var bytes = File.ReadAllBytes(targetPng);
+                                    fs.Write(bytes, 0, bytes.Length);
+                                } else {
+                                    using (var bmp = (Bitmap) Image.FromFile(targetPng))
+                                    using (var ico = Icon.FromHandle(bmp.GetHicon())) {
+                                        ico.Save(fs);
+                                    }
+                                }
+
+                                key.SetValue("DisplayIcon", targetIco, RegistryValueKind.String);
+                                success = true;
+                            }
+                        }
+                    } catch (Exception ex) {
+                        this.Log().InfoException("Couldn't write uninstall icon, will attempt from .exe", ex);
+                    } finally {
+                        File.Delete(targetPng);
+                    }
+                }
+                return success;
+            }
+
             public void KillAllProcessesBelongingToPackage()
             {
                 var ourExe = Assembly.GetEntryAssembly();
@@ -129,7 +154,7 @@ namespace Squirrel
                     .ForEach(x => {
                         try {
                             this.WarnIfThrows(() => Process.GetProcessById(x.Item2).Kill());
-                        } catch {}
+                        } catch { }
                     });
             }
 
