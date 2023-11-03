@@ -1,18 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Mono.Options;
+using Squirrel.SimpleSplat;
+using System;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Mono.Options;
-using Octokit;
-using Squirrel.SimpleSplat;
-using Squirrel;
-using Squirrel.Json;
 
 namespace SyncReleases
 {
@@ -24,11 +17,12 @@ namespace SyncReleases
         {
             var pg = new Program();
             try {
-                return pg.main(args).Result;
+                return pg.main(args).GetAwaiter().GetResult();
             } catch (Exception ex) {
                 // NB: Normally this is a terrible idea but we want to make
                 // sure Setup.exe above us gets the nonzero error code
                 Console.Error.WriteLine(ex);
+                Console.Error.WriteLine("> SyncReleases.exe -h for help");
                 return -1;
             }
         }
