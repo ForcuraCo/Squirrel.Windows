@@ -24,7 +24,7 @@ namespace SyncReleases
         {
             var pg = new Program();
             try {
-                return pg.main(args).Result;
+                return pg.main(args).GetAwaiter().GetResult();
             } catch (Exception ex) {
                 // NB: Normally this is a terrible idea but we want to make
                 // sure Setup.exe above us gets the nonzero error code
