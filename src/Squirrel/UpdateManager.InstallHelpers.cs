@@ -9,7 +9,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Win32;
-using NuGet;
+using Squirrel.NuGet;
 using System.Reflection;
 using Squirrel.SimpleSplat;
 
@@ -55,11 +55,11 @@ namespace Squirrel
                 }
 
                 var stringsToWrite = new[] {
-                    new { Key = "DisplayName", Value = zp.Title ?? zp.Description ?? zp.Summary },
+                    new { Key = "DisplayName", Value = zp.ProductName },
                     new { Key = "DisplayVersion", Value = zp.Version.ToString() },
                     new { Key = "InstallDate", Value = DateTime.Now.ToString("yyyyMMdd", CultureInfo.InvariantCulture) },
                     new { Key = "InstallLocation", Value = rootAppDirectory },
-                    new { Key = "Publisher", Value = String.Join(",", zp.Authors) },
+                    new { Key = "Publisher", Value = zp.ProductCompany },
                     new { Key = "QuietUninstallString", Value = String.Format("{0} {1}", uninstallCmd, quietSwitch) },
                     new { Key = "UninstallString", Value = uninstallCmd },
                     new { Key = "URLUpdateInfo", Value = zp.ProjectUrl != null ? zp.ProjectUrl.ToString() : "", }

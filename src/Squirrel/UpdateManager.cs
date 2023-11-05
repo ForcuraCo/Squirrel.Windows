@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
@@ -14,7 +14,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
-using NuGet;
+using Squirrel.NuGet;
 using Squirrel.SimpleSplat;
 using Squirrel.Shell;
 
@@ -29,7 +29,7 @@ namespace Squirrel
 
         IDisposable updateLock;
 
-        public UpdateManager(string urlOrPath, 
+        public UpdateManager(string urlOrPath,
             string applicationName = null,
             string rootDirectory = null,
             IFileDownloader urlDownloader = null)
@@ -135,15 +135,24 @@ namespace Squirrel
             executable = executable ??
                 Path.GetDirectoryName(typeof(UpdateManager).Assembly.Location);
 
-            if (!executable.StartsWith(rootAppDirectory, StringComparison.OrdinalIgnoreCase)) {
+            // check if the application to check is in the correct application directory
+            if (!Utility.IsFileInDirectory(executable, rootAppDirectory))
                 return null;
-            }
 
-            var appDirName = executable.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            // check if Update.exe exists in the expected relative location
+            var baseDir = Path.GetDirectoryName(executable);
+            if (!File.Exists(Path.Combine(baseDir, "..\\Update.exe")))
+                return null;
+
+            var exePathWithoutAppDir = executable.Substring(rootAppDirectory.Length);
+            var appDirName = exePathWithoutAppDir.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 .FirstOrDefault(x => x.StartsWith("app-", StringComparison.OrdinalIgnoreCase));
 
-            if (appDirName == null) return null;
-            return appDirName.ToSemanticVersion();
+            // check if we are inside an 'app-{ver}' directory and extract version
+            if (appDirName == null)
+                return null;
+
+            return new SemanticVersion(appDirName.Substring(4));
         }
 
         public void KillAllExecutablesBelongingToPackage()
@@ -174,7 +183,7 @@ namespace Squirrel
 
         static bool exiting = false;
         public static void RestartApp(string exeToStart = null, string arguments = null)
-        { 
+        {
             // NB: Here's how this method works:
             //
             // 1. We're going to pass the *name* of our EXE and the params to 
@@ -201,9 +210,9 @@ namespace Squirrel
             Thread.Sleep(500);
             Environment.Exit(0);
         }
-        
+
         public static async Task<Process> RestartAppWhenExited(string exeToStart = null, string arguments = null)
-        { 
+        {
             // NB: Here's how this method works:
             //
             // 1. We're going to pass the *name* of our EXE and the params to 
@@ -224,7 +233,7 @@ namespace Squirrel
             var updateProcess = Process.Start(getUpdateExe(), String.Format("--processStartAndWait {0} {1}", exeToStart, argsArg));
 
             await Task.Delay(500);
-            
+
             return updateProcess;
         }
 
@@ -272,7 +281,7 @@ namespace Squirrel
                 IDisposable theLock;
                 try {
                     theLock = ModeDetector.InUnitTestRunner() ?
-                        Disposable.Create(() => {}) : new SingleGlobalInstance(key, TimeSpan.FromMilliseconds(2000));
+                        Disposable.Create(() => { }) : new SingleGlobalInstance(key, TimeSpan.FromMilliseconds(2000));
                 } catch (TimeoutException) {
                     throw new TimeoutException("Couldn't acquire update lock, another instance may be running updates");
                 }
@@ -305,7 +314,7 @@ namespace Squirrel
             var singleValue = range / 100d;
             var totalPercentage = (singleValue * percentageOfCurrentStep) + stepStartPercentage;
 
-            return (int)totalPercentage;
+            return (int) totalPercentage;
         }
 
         static string getApplicationName()
@@ -316,7 +325,7 @@ namespace Squirrel
 
         static string getUpdateExe()
         {
-            var assembly = Assembly.GetEntryAssembly();
+            var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
 
             // Are we update.exe?
             if (assembly != null &&
@@ -326,12 +335,11 @@ namespace Squirrel
                 return Path.GetFullPath(assembly.Location);
             }
 
-            assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
-
             var updateDotExe = Path.Combine(Path.GetDirectoryName(assembly.Location), "..\\Update.exe");
             var target = new FileInfo(updateDotExe);
 
-            if (!target.Exists) throw new Exception("Update.exe not found, not a Squirrel-installed app?");
+            if (!target.Exists) 
+                throw new Exception("Update.exe not found, not a Squirrel-installed app?");
             return target.FullName;
         }
     }

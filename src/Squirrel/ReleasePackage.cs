@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Diagnostics.Contracts;
@@ -10,7 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using MarkdownSharp;
-using NuGet;
+using Squirrel.NuGet;
 using Squirrel.SimpleSplat;
 using System.Threading.Tasks;
 using SharpCompress.Archives.Zip;
@@ -29,37 +29,9 @@ namespace Squirrel
         string InputPackageFile { get; }
         string ReleasePackageFile { get; }
         string SuggestedReleaseFileName { get; }
+        SemanticVersion Version { get; }
 
         string CreateReleasePackage(string outputFile, string packagesRootDir = null, Func<string, string> releaseNotesProcessor = null, Action<string> contentsPostProcessHook = null);
-    }
-
-    public static class VersionComparer
-    {
-        public static bool Matches(IVersionSpec versionSpec, SemanticVersion version)
-        {
-            if (versionSpec == null)
-                return true; // I CAN'T DEAL WITH THIS
-
-            bool minVersion;
-            if (versionSpec.MinVersion == null) {
-                minVersion = true; // no preconditon? LET'S DO IT
-            } else if (versionSpec.IsMinInclusive) {
-                minVersion = version >= versionSpec.MinVersion;
-            } else {
-                minVersion = version > versionSpec.MinVersion;
-            }
-
-            bool maxVersion;
-            if (versionSpec.MaxVersion == null) {
-                maxVersion = true; // no preconditon? LET'S DO IT
-            } else if (versionSpec.IsMaxInclusive) {
-                maxVersion = version <= versionSpec.MaxVersion;
-            } else {
-                maxVersion = version < versionSpec.MaxVersion;
-            }
-
-            return maxVersion && minVersion;
-        }
     }
 
     public class ReleasePackage : IEnableLogger, IReleasePackage
@@ -76,14 +48,9 @@ namespace Squirrel
         public string InputPackageFile { get; protected set; }
         public string ReleasePackageFile { get; protected set; }
 
-        public string SuggestedReleaseFileName {
-            get {
-                var zp = new ZipPackage(InputPackageFile);
-                return String.Format("{0}-{1}-full.nupkg", zp.Id, zp.Version);
-            }
-        }
+        public string SuggestedReleaseFileName => new ZipPackage(InputPackageFile).FullReleaseFilename;
 
-        public SemanticVersion Version { get { return InputPackageFile.ToSemanticVersion(); } }
+        public SemanticVersion Version => ReleaseEntry.ParseEntryFileName(InputPackageFile).Version;
 
         public string CreateReleasePackage(string outputFile, string packagesRootDir = null, Func<string, string> releaseNotesProcessor = null, Action<string> contentsPostProcessHook = null)
         {
@@ -96,21 +63,28 @@ namespace Squirrel
 
             var package = new ZipPackage(InputPackageFile);
 
-            var dontcare = default(SemanticVersion);
+            // just in-case our parsing is more-strict than nuget.exe and
+            // the 'releasify' command was used instead of 'pack'.
+            NugetUtil.ThrowIfInvalidNugetId(package.Id);
 
             // NB: Our test fixtures use packages that aren't SemVer compliant, 
             // we don't really care that they aren't valid
-            if (!ModeDetector.InUnitTestRunner() && !SemanticVersion.TryParseStrict(package.Version.ToString(), out dontcare)) {
-                throw new Exception(
-                    String.Format(
-                        "Your package version is currently {0}, which is *not* SemVer-compatible, change this to be a SemVer version number",
-                        package.Version.ToString()));
+            if (!ModeDetector.InUnitTestRunner()) {
+                // verify that the .nuspec version is semver compliant
+                NugetUtil.ThrowIfVersionNotSemverCompliant(package.Version.ToString());
+
+                // verify that the suggested filename can be round-tripped as an assurance 
+                // someone won't run across an edge case and install a broken app somehow
+                var idtest = ReleaseEntry.ParseEntryFileName(SuggestedReleaseFileName);
+                if (idtest.PackageName != package.Id || idtest.Version != package.Version) {
+                    throw new Exception($"The package id/version could not be properly parsed, are you using special characters?");
+                }
             }
 
             // we can tell from here what platform(s) the package targets
             // but given this is a simple package we only
             // ever expect one entry here (crash hard otherwise)
-            var frameworks = package.GetSupportedFrameworks();
+            var frameworks = package.Frameworks;
             if (frameworks.Count() > 1) {
                 var platforms = frameworks
                     .Aggregate(new StringBuilder(), (sb, f) => sb.Append(f.ToString() + "; "));
@@ -123,16 +97,17 @@ namespace Squirrel
                     "The input package file {0} targets no platform and cannot be transformed into a release package.", InputPackageFile));
             }
 
-            var targetFramework = frameworks.Single();
+            // CS - docs say we don't support dependencies. I can't think of any reason allowing this is useful.
+            if (package.DependencySets.Any()) {
+                throw new InvalidOperationException(String.Format(
+                     "The input package file {0} must have no dependencies.", InputPackageFile));
+            }
+
+            //var targetFramework = frameworks.Single();
 
             // Recursively walk the dependency tree and extract all of the
             // dependent packages into the a temporary directory
             this.Log().Info("Creating release package: {0} => {1}", InputPackageFile, outputFile);
-            var dependencies = findAllDependentPackages(
-                package,
-                new LocalPackageRepository(packagesRootDir),
-                frameworkName: targetFramework)
-                .ToArray();
 
             string tempPath = null;
 
@@ -140,9 +115,6 @@ namespace Squirrel
                 var tempDir = new DirectoryInfo(tempPath);
 
                 extractZipWithEscaping(InputPackageFile, tempPath).Wait();
-
-                this.Log().Info("Extracting dependent packages: [{0}]", String.Join(",", dependencies.Select(x => x.Id)));
-                extractDependentPackages(dependencies, tempDir, targetFramework);
 
                 var specPath = tempDir.GetFiles("*.nuspec").First().FullName;
 
@@ -210,7 +182,7 @@ namespace Squirrel
                         var percentage = (currentItem * 100d) / totalItems;
                         progress((int)percentage);
 
-                        var parts = reader.Entry.Key.Split('\\', '/');
+                        var parts = reader.Entry.Key.Split('\\', '/').Select(x => Uri.UnescapeDataString(x));
                         var decoded = String.Join(Path.DirectorySeparatorChar.ToString(), parts);
 
                         if (!re.IsMatch(decoded)) continue;
@@ -248,30 +220,6 @@ namespace Squirrel
                 }
 
                 progress(100);
-            });
-        }
-
-        void extractDependentPackages(IEnumerable<IPackage> dependencies, DirectoryInfo tempPath, FrameworkName framework)
-        {
-            dependencies.ForEach(pkg => {
-                this.Log().Info("Scanning {0}", pkg.Id);
-
-                pkg.GetLibFiles().ForEach(file => {
-                    var outPath = new FileInfo(Path.Combine(tempPath.FullName, file.Path));
-
-                    if (!VersionUtility.IsCompatible(framework , new[] { file.TargetFramework }))
-                    {
-                        this.Log().Info("Ignoring {0} as the target framework is not compatible", outPath);
-                        return;
-                    }
-
-                    Directory.CreateDirectory(outPath.Directory.FullName);
-
-                    using (var of = File.Create(outPath.FullName)) {
-                        this.Log().Info("Writing {0} to {1}", file.Path, outPath);
-                        file.GetStream().CopyTo(of);
-                    }
-                });
             });
         }
 
@@ -313,45 +261,6 @@ namespace Squirrel
 
             xdoc.Save(specPath);
         }
-
-        internal IEnumerable<IPackage> findAllDependentPackages(
-            IPackage package = null,
-            IPackageRepository packageRepository = null,
-            HashSet<string> packageCache = null,
-            FrameworkName frameworkName = null)
-        {
-            package = package ?? new ZipPackage(InputPackageFile);
-            packageCache = packageCache ?? new HashSet<string>();
-
-            var deps = package.DependencySets
-                .Where(x => x.TargetFramework == null
-                            || x.TargetFramework == frameworkName)
-                .SelectMany(x => x.Dependencies);
-
-            return deps.SelectMany(dependency => {
-                var ret = matchPackage(packageRepository, dependency.Id, dependency.VersionSpec);
-
-                if (ret == null) {
-                    var message = String.Format("Couldn't find file for package in {1}: {0}", dependency.Id, packageRepository.Source);
-                    this.Log().Error(message);
-                    throw new Exception(message);
-                }
-
-                if (packageCache.Contains(ret.GetFullName())) {
-                    return Enumerable.Empty<IPackage>();
-                }
-
-                packageCache.Add(ret.GetFullName());
-
-                return findAllDependentPackages(ret, packageRepository, packageCache, frameworkName).StartWith(ret).Distinct(y => y.GetFullName());
-            }).ToArray();
-        }
-
-        IPackage matchPackage(IPackageRepository packageRepository, string id, IVersionSpec version)
-        {
-            return packageRepository.FindPackagesById(id).FirstOrDefault(x => VersionComparer.Matches(version, x.Version));
-        }
-
 
         static internal void addDeltaFilesToContentTypes(string rootDirectory)
         {

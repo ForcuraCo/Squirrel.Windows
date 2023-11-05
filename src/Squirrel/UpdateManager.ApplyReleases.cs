@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using NuGet;
+using Squirrel.NuGet;
 using Squirrel.SimpleSplat;
 using System.Threading;
 using Squirrel.Shell;
@@ -106,16 +106,13 @@ namespace Squirrel
             public async Task FullUninstall()
             {
                 var releases = getReleases();
-
                 if (!releases.Any())
                     return;
 
-                var currentRelease = releases.MaxBy(x => x.Name.ToSemanticVersion()).FirstOrDefault();
+                var (currentRelease, currentVersion) = releases.OrderByDescending(x => x.Version).FirstOrDefault();
 
                 this.Log().Info("Starting full uninstall");
                 if (currentRelease.Exists) {
-                    var version = currentRelease.Name.ToSemanticVersion();
-
                     try {
                         var squirrelAwareApps = SquirrelAwareExecutableDetector.GetAllSquirrelAwareApps(currentRelease.FullName);
 
@@ -132,7 +129,7 @@ namespace Squirrel
                                     cts.CancelAfter(20 * 1000);
 
                                     try {
-                                        await Utility.InvokeProcessAsync(exe, String.Format("--squirrel-uninstall {0}", version), cts.Token);
+                                        await Utility.InvokeProcessAsync(exe, String.Format("--squirrel-uninstall {0}", currentVersion.ToString()), cts.Token);
                                     } catch (Exception ex) {
                                         this.Log().ErrorException("Failed to run cleanup hook, continuing: " + exe, ex);
                                     }
@@ -195,7 +192,7 @@ namespace Squirrel
                         IconPath = target,
                         IconIndex = 0,
                         WorkingDirectory = Path.GetDirectoryName(exePath),
-                        Description = zf.Description,
+                        Description = zf.ProductDescription,
                     };
 
                     if (!String.IsNullOrWhiteSpace(programArguments)) {
@@ -252,7 +249,7 @@ namespace Squirrel
                             IconPath = icon ?? target,
                             IconIndex = 0,
                             WorkingDirectory = Path.GetDirectoryName(exePath),
-                            Description = zf.Description,
+                            Description = zf.ProductDescription,
                         };
 
                         if (!String.IsNullOrWhiteSpace(programArguments)) {
@@ -696,14 +693,15 @@ namespace Squirrel
                 return await Task.Run(() => ReleaseEntry.BuildReleasesFile(Utility.PackageDirectoryForAppDir(rootAppDirectory)));
             }
 
-            IEnumerable<DirectoryInfo> getReleases()
+            IEnumerable<(DirectoryInfo Directory, SemanticVersion Version)> getReleases()
             {
                 var rootDirectory = new DirectoryInfo(rootAppDirectory);
 
-                if (!rootDirectory.Exists) return Enumerable.Empty<DirectoryInfo>();
+                if (!rootDirectory.Exists) return Enumerable.Empty<(DirectoryInfo Directory, SemanticVersion Version)>();
 
                 return rootDirectory.GetDirectories()
-                    .Where(x => x.Name.StartsWith("app-", StringComparison.InvariantCultureIgnoreCase));
+                    .Where(x => x.Name.StartsWith("app-", StringComparison.InvariantCultureIgnoreCase))
+                    .Select(x => (x, new SemanticVersion(x.Name.Substring(4))));
             }
 
             DirectoryInfo getDirectoryForRelease(SemanticVersion releaseVersion)
@@ -715,14 +713,15 @@ namespace Squirrel
             {
                 var possibleProductNames = new[] {
                     versionInfo.ProductName,
-                    package.Title,
+                    package.ProductName,
                     versionInfo.FileDescription,
                     Path.GetFileNameWithoutExtension(versionInfo.FileName)
                 };
 
                 var possibleCompanyNames = new[] {
                     versionInfo.CompanyName,
-                    package.Authors.FirstOrDefault() ?? package.Id,
+                    package.ProductCompany,
+                    package.Id
                 };
 
                 var prodName = possibleCompanyNames.First(x => !String.IsNullOrWhiteSpace(x));

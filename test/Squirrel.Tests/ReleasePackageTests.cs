@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Versioning;
 using MarkdownSharp;
-using NuGet;
+using Squirrel.NuGet;
 using Squirrel;
 using Squirrel.Tests.TestHelpers;
 using System;
@@ -16,6 +16,33 @@ namespace Squirrel.Tests.Core
 {
     public class CreateReleasePackageTests : IEnableLogger
     {
+        [Theory]
+        [InlineData("1.2.3")]
+        [InlineData("1.2.3-alpha13")]
+        [InlineData("1.2.3-alpha135")]
+        [InlineData("0.0.1")]
+        [InlineData("1.299656.3-alpha")]
+        public void SemanticVersionParsesValidVersion(string ver)
+        {
+            NugetUtil.ThrowIfVersionNotSemverCompliant(ver);
+            Assert.True(SemanticVersion.TryParseStrict(ver, out var _));
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("1")]
+        [InlineData("0")]
+        [InlineData("1.2.3.4")]
+        [InlineData("1.2.3.4-alpha")]
+        [InlineData("0.0.0.0")]
+        [InlineData("0.0.0")]
+        [InlineData("0.0")]
+        [InlineData("0.0.0-alpha")]
+        public void SemanticVersionThrowsInvalidVersion(string ver)
+        {
+            Assert.ThrowsAny<Exception>(() => NugetUtil.ThrowIfVersionNotSemverCompliant(ver));
+        }
+
         [Fact]
         public void SemanticVersionDoesWhatIWant()
         {
@@ -47,10 +74,10 @@ namespace Squirrel.Tests.Core
 
                 this.Log().Info("Files in release package:");
 
-                List<IPackageFile> files = pkg.GetFiles().ToList();
+                List<ZipPackageFile> files = pkg.Files.ToList();
                 files.ForEach(x => this.Log().Info(x.Path));
 
-                List<string> nonDesktopPaths = new[] {"sl", "winrt", "netcore", "win8", "windows8", "MonoAndroid", "MonoTouch", "MonoMac", "wp", }
+                List<string> nonDesktopPaths = new[] { "sl", "winrt", "netcore", "win8", "windows8", "MonoAndroid", "MonoTouch", "MonoMac", "wp", }
                     .Select(x => @"lib\" + x)
                     .ToList();
 
@@ -62,21 +89,6 @@ namespace Squirrel.Tests.Core
         }
 
         [Fact]
-        public void FindPackageInOurLocalPackageList()
-        {
-            var inputPackage = IntegrationTestHelper.GetPath("fixtures", "Squirrel.Core.1.0.0.0.nupkg");
-            var sourceDir = IntegrationTestHelper.GetPath("fixtures", "packages");
-            (new DirectoryInfo(sourceDir)).Exists.ShouldBeTrue();
-
-            var fixture = ExposedObject.From(new ReleasePackage(inputPackage));
-            IPackage result = fixture.matchPackage(new LocalPackageRepository(sourceDir), "xunit", VersionUtility.ParseVersionSpec("[1.0,2.0]"));
-
-            result.Id.ShouldEqual("xunit");
-            result.Version.Version.Major.ShouldEqual(2);
-            result.Version.Version.Minor.ShouldEqual(0);
-        }
-
-        [Fact]
         public void CanLoadPackageWhichHasNoDependencies()
         {
             var inputPackage = IntegrationTestHelper.GetPath("fixtures", "Squirrel.Core.NoDependencies.1.0.0.0.nupkg");
@@ -85,9 +97,22 @@ namespace Squirrel.Tests.Core
             var sourceDir = IntegrationTestHelper.GetPath("fixtures", "packages");
             try {
                 fixture.CreateReleasePackage(outputPackage, sourceDir);
-            }
-            finally {
+            } finally {
                 File.Delete(outputPackage);
+            }
+        }
+
+        [Fact]
+        public void ThrowsIfLoadsPackageWithDependencies()
+        {
+            var inputPackage = IntegrationTestHelper.GetPath("fixtures", "ProjectDependsOnJsonDotNet.1.0.nupkg");
+            var outputPackage = Path.GetTempFileName() + ".nupkg";
+            var fixture = new ReleasePackage(inputPackage);
+            try {
+                Assert.Throws<InvalidOperationException>(() => fixture.CreateReleasePackage(outputPackage));
+            } finally {
+                if (File.Exists(outputPackage))
+                    File.Delete(outputPackage);
             }
         }
 
@@ -109,7 +134,7 @@ namespace Squirrel.Tests.Core
                 // invulnerable to ExposedObject. Whyyyyyyyyy
                 var renderMinfo = fixture.GetType().GetMethod("renderReleaseNotesMarkdown",
                     BindingFlags.NonPublic | BindingFlags.Instance);
-                renderMinfo.Invoke(fixture, new object[] {targetFile, processor});
+                renderMinfo.Invoke(fixture, new object[] { targetFile, processor });
 
                 var doc = XDocument.Load(targetFile);
                 XNamespace ns = "http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd";
@@ -121,72 +146,6 @@ namespace Squirrel.Tests.Core
                 htmlText.Contains("## Release Notes").ShouldBeFalse();
             } finally {
                 File.Delete(targetFile);
-            }
-        }
-
-        [Fact]
-        public void UsesTheRightVersionOfADependencyWhenMultipleAreInPackages()
-        {
-            var outputPackage = Path.GetTempFileName() + ".nupkg";
-            string outputFile = null;
-
-            var inputPackage = IntegrationTestHelper.GetPath("fixtures", "CaliburnMicroDemo.1.0.0.nupkg");
-
-            var wrongPackage = "Caliburn.Micro.1.4.1.nupkg";
-            var wrongPackagePath = IntegrationTestHelper.GetPath("fixtures", wrongPackage);
-            var rightPackage = "Caliburn.Micro.1.5.2.nupkg";
-            var rightPackagePath = IntegrationTestHelper.GetPath("fixtures", rightPackage);
-
-            try {
-                var sourceDir = IntegrationTestHelper.GetPath("fixtures", "packages");
-                (new DirectoryInfo(sourceDir)).Exists.ShouldBeTrue();
-
-                File.Copy(wrongPackagePath, Path.Combine(sourceDir, wrongPackage), true);
-                File.Copy(rightPackagePath, Path.Combine(sourceDir, rightPackage), true);
-
-                var package = new ReleasePackage(inputPackage);
-                var outputFileName = package.CreateReleasePackage(outputPackage, sourceDir);
-
-                var zipPackage = new ZipPackage(outputFileName);
-
-                var fileName = "Caliburn.Micro.dll";
-                var dependency = zipPackage.GetLibFiles()
-                    .Where(f => f.Path.EndsWith(fileName))
-                    .Single(f => f.TargetFramework == FrameworkTargetVersion.Net40);
-
-                outputFile = new FileInfo(Path.Combine(sourceDir, fileName)).FullName;
-
-                using (var of = File.Create(outputFile))
-                {
-                    dependency.GetStream().CopyTo(of);
-                }
-
-                var assemblyName = AssemblyName.GetAssemblyName(outputFile);
-                Assert.Equal(1, assemblyName.Version.Major);
-                Assert.Equal(5, assemblyName.Version.Minor);
-            } finally {
-                File.Delete(outputPackage);
-                File.Delete(outputFile);
-            }
-        }
-
-        [Fact]
-        public void DependentPackageNotFoundAndThrowsError()
-        {
-            string packagesDir;
-            // use empty packages folder
-            using (Utility.WithTempDirectory(out packagesDir)) {
-                var inputPackage = IntegrationTestHelper.GetPath("fixtures", "ProjectDependsOnJsonDotNet.1.0.nupkg");
-
-                var outputPackage = Path.GetTempFileName() + ".nupkg";
-
-                try {
-                    var package = new ReleasePackage(inputPackage);
-                    Assert.Throws<Exception>(() =>
-                        package.CreateReleasePackage(outputPackage, packagesDir));
-                } finally {
-                    File.Delete(outputPackage);
-                }
             }
         }
 
@@ -212,7 +171,7 @@ namespace Squirrel.Tests.Core
 
                 this.Log().Info("Files in release package:");
 
-                var contentFiles = pkg.GetContentFiles();
+                var contentFiles = pkg.Files.Where(f => f.IsContentFile()).ToArray();
                 Assert.Equal(2, contentFiles.Count());
 
                 var contentFilePaths = contentFiles.Select(f => f.EffectivePath);
@@ -220,38 +179,7 @@ namespace Squirrel.Tests.Core
                 Assert.Contains("some-words.txt", contentFilePaths);
                 Assert.Contains("dir\\item-in-subdirectory.txt", contentFilePaths);
 
-                Assert.Equal(1, pkg.GetLibFiles().Count());
-            } finally {
-                File.Delete(outputPackage);
-            }
-        }
-
-        [Fact]
-        public void WhenAProjectContainsNet45BinariesItContainsTheNecessaryDependency()
-        {
-            var outputPackage = Path.GetTempFileName() + ".nupkg";
-
-            var inputPackage = IntegrationTestHelper.GetPath("fixtures", "ThisShouldBeANet45Project.1.0.nupkg");
-
-            var rightPackage = "Caliburn.Micro.1.5.2.nupkg";
-            var rightPackagePath = IntegrationTestHelper.GetPath("fixtures", rightPackage);
-
-            try {
-                var sourceDir = IntegrationTestHelper.GetPath("fixtures", "packages");
-                (new DirectoryInfo(sourceDir)).Exists.ShouldBeTrue();
-
-                File.Copy(rightPackagePath, Path.Combine(sourceDir, rightPackage), true);
-
-                var package = new ReleasePackage(inputPackage);
-                var outputFileName = package.CreateReleasePackage(outputPackage, sourceDir);
-
-                var zipPackage = new ZipPackage(outputFileName);
-
-                var dependency = zipPackage.GetLibFiles()
-                    .Where(f => f.Path.EndsWith("Caliburn.Micro.dll"))
-                    .FirstOrDefault(f => f.TargetFramework == FrameworkTargetVersion.Net45);
-
-                Assert.NotNull(dependency);
+                Assert.Equal(1, pkg.Files.Where(f => f.IsLibFile()).Count());
             } finally {
                 File.Delete(outputPackage);
             }

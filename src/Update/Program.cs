@@ -1,4 +1,4 @@
-﻿using NuGet;
+﻿using Squirrel.NuGet;
 using Squirrel.SimpleSplat;
 using Squirrel.Json;
 using System;
@@ -480,7 +480,6 @@ namespace Squirrel.Update
             var pathToWix = pathToWixTools();
             var setupExeDir = Path.GetDirectoryName(setupExe);
             string template = File.ReadAllText(Path.Combine(pathToWix, "template.wxs"));
-            var company = String.Join(",", package.Authors);
 
             var culture = CultureInfo.GetCultureInfo(package.Language ?? "").TextInfo.ANSICodePage;
 
@@ -492,10 +491,10 @@ namespace Squirrel.Update
 
             var templateData = new Dictionary<string, string> {
                 { "Id", wixId },
-                { "Title", package.Title },
-                { "Author", company },
-                { "Version", Regex.Replace(package.Version.ToString(), @"-.*$", "") },
-                { "Summary", package.Summary ?? package.Description ?? package.Id },
+                { "Title", package.ProductName },
+                { "Author", package.ProductCompany },
+                { "Version", package.Version.Version.ToString() },
+                { "Summary", package.ProductDescription},
                 { "SetupExecutable", setupExe },
                 { "Codepage", $"{culture}" },
                 { "Platform", packageAs64Bit ? "x64" : "x86" },
@@ -746,12 +745,11 @@ namespace Squirrel.Update
         static async Task setPEVersionInfoAndIcon(string exePath, IPackage package, string iconPath = null)
         {
             var realExePath = Path.GetFullPath(exePath);
-            var company = String.Join(",", package.Authors);
             var verStrings = new Dictionary<string, string>() {
-                { "CompanyName", company },
-                { "LegalCopyright", package.Copyright ?? "Copyright © " + DateTime.Now.Year.ToString() + " " + company },
-                { "FileDescription", package.Summary ?? package.Description ?? "Installer for " + package.Id },
-                { "ProductName", package.Description ?? package.Summary ?? package.Id },
+                { "CompanyName", package.ProductCompany },
+                { "LegalCopyright", package.ProductCopyright ?? "Copyright © " + DateTime.Now.Year.ToString() + " " + package.ProductCompany },
+                { "FileDescription", package.ProductDescription ?? "Installer for " + package.Id },
+                { "ProductName", package.ProductName },
             };
 
             var args = verStrings.Aggregate(new StringBuilder("\"" + realExePath + "\""), (acc, x) => { acc.AppendFormat(" --set-version-string \"{0}\" \"{1}\"", x.Key, x.Value); return acc; });
@@ -780,7 +778,6 @@ namespace Squirrel.Update
         {
             var pathToWix = pathToWixTools();
             var setupExeDir = Path.GetDirectoryName(setupExe);
-            var company = String.Join(",", package.Authors);
 
             var culture = CultureInfo.GetCultureInfo(package.Language ?? "").TextInfo.ANSICodePage;
 
@@ -794,10 +791,11 @@ namespace Squirrel.Update
 
             var templateData = new Dictionary<string, string> {
                 { "Id", wixId },
-                { "Title", package.Title },
-                { "Author", company },
-                { "Version", Regex.Replace(package.Version.ToString(), @"-.*$", "") },
-                { "Summary", package.Summary ?? package.Description ?? package.Id },
+                { "Title", package.ProductName },
+                { "Author", package.ProductCompany },
+                { "Version", package.Version.Version.ToString() },
+                { "Summary", package.ProductDescription },
+                { "SetupExecutable", setupExe },
                 { "Codepage", $"{culture}" },
                 { "Platform", packageAs64Bit ? "x64" : "x86" },
                 { "ProgramFilesFolder", packageAs64Bit ? "ProgramFiles64Folder" : "ProgramFilesFolder" },

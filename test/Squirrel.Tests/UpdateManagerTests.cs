@@ -35,7 +35,7 @@ namespace Squirrel.Tests
                         await mgr.CreateUninstallerRegistryEntry();
                         var regKey = await mgr.CreateUninstallerRegistryEntry();
 
-                        Assert.False(String.IsNullOrWhiteSpace((string)regKey.GetValue("DisplayName")));
+                        Assert.False(String.IsNullOrWhiteSpace((string) regKey.GetValue("DisplayName")));
 
                         mgr.RemoveUninstallerRegistryEntry();
                     }
@@ -111,12 +111,11 @@ namespace Squirrel.Tests
                 }
             }
 
-            [Fact(Skip = "This test is currently failing in CI")]
+            [Fact]
             public async Task SpecialCharactersInitialInstallTest()
             {
                 string tempDir;
-                using (Utility.WithTempDirectory(out tempDir))
-                {
+                using (Utility.WithTempDirectory(out tempDir)) {
                     var remotePackageDir = Directory.CreateDirectory(Path.Combine(tempDir, "remotePackages"));
                     var localAppDir = Path.Combine(tempDir, "theApp");
 
@@ -124,8 +123,7 @@ namespace Squirrel.Tests
                         "SpecialCharacters-0.1.0-full.nupkg",
                     }.ForEach(x => File.Copy(IntegrationTestHelper.GetPath("fixtures", x), Path.Combine(remotePackageDir.FullName, x)));
 
-                    using (var fixture = new UpdateManager(remotePackageDir.FullName, "theApp", tempDir))
-                    {
+                    using (var fixture = new UpdateManager(remotePackageDir.FullName, "theApp", tempDir)) {
                         await fixture.FullInstall();
                     }
 
@@ -145,8 +143,7 @@ namespace Squirrel.Tests
             public async Task WhenBothFilesAreInSyncNoUpdatesAreApplied()
             {
                 string tempDir;
-                using (Utility.WithTempDirectory(out tempDir))
-                {
+                using (Utility.WithTempDirectory(out tempDir)) {
                     var appDir = Path.Combine(tempDir, "theApp");
                     var localPackages = Path.Combine(appDir, "packages");
                     var remotePackages = Path.Combine(tempDir, "releases");
@@ -164,7 +161,7 @@ namespace Squirrel.Tests
                     });
 
                     var fixture = new UpdateManager.ApplyReleasesImpl(appDir);
-                        
+
                     // sync both release files
                     await fixture.updateLocalReleasesFile();
                     ReleaseEntry.BuildReleasesFile(remotePackages);
@@ -184,8 +181,7 @@ namespace Squirrel.Tests
             public async Task WhenRemoteReleasesDoNotHaveDeltasNoUpdatesAreApplied()
             {
                 string tempDir;
-                using (Utility.WithTempDirectory(out tempDir))
-                {
+                using (Utility.WithTempDirectory(out tempDir)) {
                     var appDir = Path.Combine(tempDir, "theApp");
                     var localPackages = Path.Combine(appDir, "packages");
                     var remotePackages = Path.Combine(tempDir, "releases");
@@ -229,8 +225,7 @@ namespace Squirrel.Tests
             public async Task WhenTwoRemoteUpdatesAreAvailableChoosesDeltaVersion()
             {
                 string tempDir;
-                using (Utility.WithTempDirectory(out tempDir))
-                {
+                using (Utility.WithTempDirectory(out tempDir)) {
                     var appDir = Path.Combine(tempDir, "theApp");
                     var localPackages = Path.Combine(appDir, "packages");
                     var remotePackages = Path.Combine(tempDir, "releases");
@@ -318,17 +313,34 @@ namespace Squirrel.Tests
                 }
             }
 
-            [Theory]
-            [InlineData("C:\\Foo\\Bar\\Test.exe", default(string))]
-            [InlineData("%LocalAppData%\\theApp\\app-1.0.0.1\\Test.exe", "1.0.0.1")]
-            [InlineData("%LocalAppData%\\aDifferentApp\\app-1.0.0.1\\Test.exe", default(string))]
-            public void CurrentlyInstalledVersionTests(string input, string expectedVersion)
-            {
-                input = Environment.ExpandEnvironmentVariables(input);
-                var expected = expectedVersion != null ? new SemanticVersion(expectedVersion) : default(SemanticVersion);
+            //[Theory]
+            ////[InlineData("C:\\Foo\\Bar\\Test.exe", default(string))]
+            //[InlineData("%LocalAppData%\\theApp\\app-1.0.0.1\\Test.exe", "1.0.0.1")]
+            ////[InlineData("%LocalAppData%\\aDifferentApp\\app-1.0.0.1\\Test.exe", default(string))]
+            //public void CurrentlyInstalledVersionTests(string input, string expectedVersion)
+            //{
+            //    input = Environment.ExpandEnvironmentVariables(input);
+            //    var expected = expectedVersion != null ? new SemanticVersion(expectedVersion) : default(SemanticVersion);
 
-                using (var fixture = new UpdateManager("http://lol", "theApp")) {
-                    Assert.Equal(expected, fixture.CurrentlyInstalledVersion(input));
+            //    using (var fixture = new UpdateManager("http://lol", "theApp")) {
+            //        Assert.Equal(expected, fixture.CurrentlyInstalledVersion(input));
+            //    }
+            //}
+
+            [Fact]
+            public void IsInstalledHandlesInvalidDirectoryStructure()
+            {
+                using (Utility.WithTempDirectory(out var tempDir)) {
+                    Directory.CreateDirectory(Path.Combine(tempDir, "theApp"));
+                    Directory.CreateDirectory(Path.Combine(tempDir, "theApp", "app-1.0.1"));
+                    Directory.CreateDirectory(Path.Combine(tempDir, "theApp", "wrongDir"));
+                    File.WriteAllText(Path.Combine(tempDir, "theApp", "Update.exe"), "1");
+                    using (var fixture = new UpdateManager("http://lol", "theApp", tempDir)) {
+                        Assert.Null(fixture.CurrentlyInstalledVersion(Path.Combine(tempDir, "app.exe")));
+                        Assert.Null(fixture.CurrentlyInstalledVersion(Path.Combine(tempDir, "theApp", "app.exe")));
+                        Assert.Null(fixture.CurrentlyInstalledVersion(Path.Combine(tempDir, "theApp", "wrongDir", "app.exe")));
+                        Assert.Equal(new SemanticVersion(1, 0, 1, 9), fixture.CurrentlyInstalledVersion(Path.Combine(tempDir, "theApp", "app-1.0.1.9", "app.exe")));
+                    }
                 }
             }
 
@@ -356,8 +368,7 @@ namespace Squirrel.Tests
                 var progress = new List<int>();
 
                 // 3 % (3 stages), check for updates
-                foreach (var step in new [] { 0, 33, 66, 100 })
-                {
+                foreach (var step in new[] { 0, 33, 66, 100 }) {
                     progress.Add(UpdateManager.CalculateProgress(step, 0, 3));
 
                     Assert.InRange(progress.Last(), 0, 3);
@@ -366,8 +377,7 @@ namespace Squirrel.Tests
                 Assert.Equal(3, progress.Last());
 
                 // 3 - 30 %, download releases
-                for (var step = 0; step <= 100; step++)
-                {
+                for (var step = 0; step <= 100; step++) {
                     progress.Add(UpdateManager.CalculateProgress(step, 3, 30));
 
                     Assert.InRange(progress.Last(), 3, 30);
@@ -376,8 +386,7 @@ namespace Squirrel.Tests
                 Assert.Equal(30, progress.Last());
 
                 // 30 - 100 %, apply releases
-                for (var step = 0; step <= 100; step++)
-                {
+                for (var step = 0; step <= 100; step++) {
                     progress.Add(UpdateManager.CalculateProgress(step, 30, 100));
 
                     Assert.InRange(progress.Last(), 30, 100);

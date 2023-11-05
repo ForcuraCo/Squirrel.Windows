@@ -11,6 +11,9 @@ namespace Squirrel
     /// SquirrelAwareApp helps you to handle Squirrel app activation events
     /// correctly.
     /// </summary>
+#if NET5_0_OR_GREATER
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
     public static class SquirrelAwareApp
     {
         /// <summary>
@@ -64,7 +67,7 @@ namespace Squirrel
             if (args.Length != 2) return;
 
             if (!lookup.ContainsKey(args[0])) return;
-            var version = args[1].ToSemanticVersion().Version;
+            var version = new SemanticVersion(args[1]).Version;
 
             try {
                 lookup[args[0]](version);

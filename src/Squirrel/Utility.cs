@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
-using NuGet;
+using Squirrel.NuGet;
 
 namespace Squirrel
 {
@@ -70,6 +70,30 @@ namespace Squirrel
             return Encoding.UTF8.GetString(output);
         }
 
+        public static bool TryParseEnumU16<TEnum>(ushort enumValue, out TEnum retVal)
+        {
+            retVal = default(TEnum);
+            bool success = Enum.IsDefined(typeof(TEnum), enumValue);
+            if (success) {
+                retVal = (TEnum) Enum.ToObject(typeof(TEnum), enumValue);
+            }
+            return success;
+        }
+
+        public static string NormalizePath(string path)
+        {
+            var fullPath = Path.GetFullPath(path);
+            var normalized = new Uri(fullPath, UriKind.Absolute).LocalPath;
+            return normalized.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+
+        public static bool IsFileInDirectory(string file, string directory)
+        {
+            var normalizedDir = NormalizePath(directory) + Path.DirectorySeparatorChar;
+            var normalizedFile = NormalizePath(file);
+            return normalizedFile.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase);
+        }
+
         public static IEnumerable<FileInfo> GetAllFilesRecursively(this DirectoryInfo rootPath)
         {
             Contract.Requires(rootPath != null);
@@ -111,8 +135,10 @@ namespace Squirrel
                 SecurityProtocolType.Tls12 |
                 SecurityProtocolType.Tls11 |
                 SecurityProtocolType.Tls;
+#if !NET5_0_OR_GREATER
             // disable SSLv3 support for security reasons
             ServicePointManager.SecurityProtocol &= ~SecurityProtocolType.Ssl3;
+#endif
 
             var ret = new WebClient();
             var wp = WebRequest.DefaultWebProxy;

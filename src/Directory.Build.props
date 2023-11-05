@@ -2,16 +2,17 @@
 <Project>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <EnableSourceLink Condition=" '$(NCrunch)' == '1' ">false</EnableSourceLink>
-
     <ProjectName Condition=" '$(ProjectName)' == '' ">$(MSBuildProjectName)</ProjectName>
     <BaseOutputPath>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\build\))</BaseOutputPath>
     <BaseIntermediateOutputPath>$(BaseOutputPath)obj\$(Configuration)\$(ProjectName)\</BaseIntermediateOutputPath>
     <OutputPath>$(BaseOutputPath)$(Configuration)\</OutputPath>
 
-    <Company>GitHub</Company>
-    <Copyright>Copyright © GitHub 2013-2015</Copyright>
-    <PackageLicenseExpression>MS-RL</PackageLicenseExpression>
+    <Company>Forcura</Company>
+    <Copyright>Copyright © Forcura 2023</Copyright>
+
+    <LangVersion>9.0</LangVersion>
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <Product>Squirrel</Product>
   </PropertyGroup>
 
