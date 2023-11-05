@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+#
+# must be run in src/ directory
 set -e
 
 VERSION="$1"
@@ -7,6 +9,7 @@ BASEDIR="$(dirname "$0")"
 if [ ! -n "$VERSION" ]
 then 
     echo "Must pass a version number as the initial argument, ie:  publish_official 1.2.0"
+    exit -1
 fi
 
 # path variables
