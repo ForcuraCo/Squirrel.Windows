@@ -1,7 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project>
-  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net462</TargetFramework>
     <OutputType>Exe</OutputType>
@@ -10,7 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\vendor\nuget\src\Core\Core.csproj" />
     <ProjectReference Include="..\Squirrel\Squirrel.csproj" />
   </ItemGroup>
 
@@ -18,17 +15,13 @@
     <PackageReference Include="Octokit" Version="0.10.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="ILRepack" Version="1.26.0" PrivateAssets="All" />
+   <!-- Allow netframework binaries to be built explicitly using the command line -->
+  <ItemGroup Condition=" $(TargetFramework) == 'net462' ">
+    <PackageReference Include="ILRepack" Version="2.0.18" PrivateAssets="all" />
   </ItemGroup>
 
-  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <PostBuildEvent>
-      cd "$(TargetDir)"
-      "$(NuGetPackageRoot)ilrepack\1.26.0\tools\ILRepack.exe" /internalize /out:$(TargetFileName).tmp $(TargetFileName) SharpCompress.dll Microsoft.Web.XmlTransform.dll Squirrel.dll Octokit.dll NuGet.Squirrel.dll
-      del "$(TargetFileName)"
-      ren "$(TargetFileName).tmp" "$(TargetFileName)"
-    </PostBuildEvent>
-  </PropertyGroup>
+  <Target Name="Repack" AfterTargets="Build" Condition=" $(TargetFramework) == 'net462' AND $(Configuration) == 'Release' ">
+    <Exec WorkingDirectory="$(OutDir)" Command="$(PkgILRepack)\tools\ILRepack.exe /wildcards /out:SyncReleases.tmp SyncReleases.exe *.dll &amp;&amp; del SyncReleases.exe &amp;&amp; ren SyncReleases.tmp SyncReleases.exe" />
+  </Target>
+
 </Project>
