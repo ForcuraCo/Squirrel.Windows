@@ -74,7 +74,7 @@ namespace Squirrel
         public string GetReleaseNotes(string packageDirectory)
         {
             var zp = new ZipPackage(Path.Combine(packageDirectory, Filename));
-            var t = zp.Id;
+            _ = zp.Id;
 
             if (String.IsNullOrWhiteSpace(zp.ReleaseNotes)) {
                 throw new Exception(String.Format("Invalid 'ReleaseNotes' value in nuspec file at '{0}'", Path.Combine(packageDirectory, Filename)));
@@ -254,8 +254,7 @@ namespace Squirrel
             // Write the new RELEASES file to a temp file then move it into
             // place
             var entries = entriesQueue.ToList();
-            var tempFile = default(string);
-            Utility.WithTempFile(out tempFile, releasePackagesDir);
+            Utility.WithTempFile(out var tempFile, releasePackagesDir);
 
             try {
                 using (var of = File.OpenWrite(tempFile)) {

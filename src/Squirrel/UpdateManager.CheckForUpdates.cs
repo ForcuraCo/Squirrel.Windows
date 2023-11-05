@@ -28,7 +28,7 @@ namespace Squirrel
                 Action<int> progress = null,
                 IFileDownloader urlDownloader = null)
             {
-                progress = progress ?? (_ => { });
+                progress ??= (_ => { });
 
                 var localReleases = Enumerable.Empty<ReleaseEntry>();
                 var stagingId = intention == UpdaterIntention.Install ? null : getOrCreateStagedUserId();
@@ -52,7 +52,7 @@ namespace Squirrel
 
                 var latestLocalRelease = localReleases.Count() > 0 ?
                     localReleases.MaxBy(x => x.Version).First() :
-                    default(ReleaseEntry);
+                    default;
 
                 // Fetch the remote RELEASES file, whether it's a local dir or an
                 // HTTP URL
@@ -150,7 +150,7 @@ namespace Squirrel
             UpdateInfo determineUpdateInfo(UpdaterIntention intention, IEnumerable<ReleaseEntry> localReleases, IEnumerable<ReleaseEntry> remoteReleases, bool ignoreDeltaUpdates)
             {
                 var packageDirectory = Utility.PackageDirectoryForAppDir(rootAppDirectory);
-                localReleases = localReleases ?? Enumerable.Empty<ReleaseEntry>();
+                localReleases ??= Enumerable.Empty<ReleaseEntry>();
 
                 if (remoteReleases == null) {
                     this.Log().Warn("Release information couldn't be determined due to remote corrupt RELEASES file");
@@ -192,8 +192,7 @@ namespace Squirrel
             internal Guid? getOrCreateStagedUserId()
             {
                 var stagedUserIdFile = Path.Combine(rootAppDirectory, "packages", ".betaId");
-                var ret = default(Guid);
-
+                Guid ret;
                 try {
                     if (!Guid.TryParse(File.ReadAllText(stagedUserIdFile, Encoding.UTF8), out ret)) {
                         throw new Exception("File was read but contents were invalid");

@@ -39,7 +39,7 @@ namespace Squirrel.NuGet
 
         public static string SafeTrim(this string value)
         {
-            return value == null ? null : value.Trim();
+            return value?.Trim();
         }
 
         public static string GetOptionalAttributeValue(this XElement element, string localName, string namespaceName = null)
@@ -50,7 +50,7 @@ namespace Squirrel.NuGet
             } else {
                 attr = element.Attribute(XName.Get(localName, namespaceName));
             }
-            return attr != null ? attr.Value : null;
+            return attr?.Value;
         }
 
         public static string GetOptionalElementValue(this XContainer element, string localName, string namespaceName = null)
@@ -61,7 +61,7 @@ namespace Squirrel.NuGet
             } else {
                 child = element.Element(XName.Get(localName, namespaceName));
             }
-            return child != null ? child.Value : null;
+            return child?.Value;
         }
 
         public static IEnumerable<XElement> ElementsNoNamespace(this XContainer container, string localName)

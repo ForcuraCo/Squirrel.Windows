@@ -55,7 +55,7 @@ namespace Squirrel.Tests.TestHelpers
             }
         }
 
-        static object gate = 42;
+        static readonly object gate = 42;
         public static IDisposable WithFakeInstallDirectory(string packageFileName, out string path)
         {
             var ret = Utility.WithTempDirectory(out path);
@@ -69,20 +69,19 @@ namespace Squirrel.Tests.TestHelpers
 
         public static string CreateFakeInstalledApp(string version, string outputDir, string nuspecFile = null)
         {
-            var targetDir = default(string);
-
             var nuget = IntegrationTestHelper.GetPath("nuget.exe");
-            nuspecFile = nuspecFile ?? "SquirrelInstalledApp.nuspec";
+            nuspecFile ??= "SquirrelInstalledApp.nuspec";
 
+            string targetDir;
             using (var clearTemp = Utility.WithTempDirectory(out targetDir)) {
                 var nuspec = File.ReadAllText(IntegrationTestHelper.GetPath("fixtures", nuspecFile), Encoding.UTF8);
                 File.WriteAllText(Path.Combine(targetDir, nuspecFile), nuspec.Replace("0.1.0", version), Encoding.UTF8);
 
                 File.Copy(
-                    IntegrationTestHelper.GetPath("fixtures", "SquirrelAwareApp.exe"), 
+                    IntegrationTestHelper.GetPath("fixtures", "SquirrelAwareApp.exe"),
                     Path.Combine(targetDir, "SquirrelAwareApp.exe"));
                 File.Copy(
-                    IntegrationTestHelper.GetPath("fixtures", "NotSquirrelAwareApp.exe"), 
+                    IntegrationTestHelper.GetPath("fixtures", "NotSquirrelAwareApp.exe"),
                     Path.Combine(targetDir, "NotSquirrelAwareApp.exe"));
 
                 var psi = new ProcessStartInfo(nuget, "pack " + Path.Combine(targetDir, nuspecFile)) {
@@ -98,7 +97,7 @@ namespace Squirrel.Tests.TestHelpers
                 pi.WaitForExit();
                 var output = pi.StandardOutput.ReadToEnd();
                 var err = pi.StandardError.ReadToEnd();
-                Console.WriteLine(output);  Console.WriteLine(err);
+                Console.WriteLine(output); Console.WriteLine(err);
 
                 var di = new DirectoryInfo(targetDir);
                 var pkg = di.EnumerateFiles("*.nupkg").First();

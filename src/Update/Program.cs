@@ -157,7 +157,7 @@ namespace Squirrel.Update
 
         public async Task Install(bool silentInstall, ProgressSource progressSource, string sourceDirectory = null)
         {
-            sourceDirectory = sourceDirectory ?? Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            sourceDirectory ??= Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var releasesPath = Path.Combine(sourceDirectory, "RELEASES");
 
             this.Log().Info("Starting install, writing to {0}", sourceDirectory);
@@ -204,7 +204,7 @@ namespace Squirrel.Update
 
         public async Task Update(string updateUrl, string appName = null)
         {
-            appName = appName ?? getAppNameFromDirectory();
+            appName ??= getAppNameFromDirectory();
 
             this.Log().Info("Starting update, downloading from " + updateUrl);
 
@@ -256,7 +256,7 @@ namespace Squirrel.Update
 
         public async Task<string> Download(string updateUrl, string appName = null)
         {
-            appName = appName ?? getAppNameFromDirectory();
+            appName ??= getAppNameFromDirectory();
 
             this.Log().Info("Fetching update information, downloading from " + updateUrl);
             using (var mgr = new UpdateManager(updateUrl, appName)) {
@@ -280,7 +280,7 @@ namespace Squirrel.Update
 
         public async Task<string> CheckForUpdate(string updateUrl, string appName = null)
         {
-            appName = appName ?? getAppNameFromDirectory();
+            appName ??= getAppNameFromDirectory();
 
             this.Log().Info("Fetching update information, downloading from " + updateUrl);
             using (var mgr = new UpdateManager(updateUrl, appName)) {
@@ -304,7 +304,7 @@ namespace Squirrel.Update
         {
             this.Log().Info("Starting uninstall for app: " + appName);
 
-            appName = appName ?? getAppNameFromDirectory();
+            appName ??= getAppNameFromDirectory();
             using (var mgr = new UpdateManager("", appName)) {
                 await mgr.FullUninstall();
                 mgr.RemoveUninstallerRegistryEntry();
@@ -325,9 +325,9 @@ namespace Squirrel.Update
                 }
             }
 
-            targetDir = targetDir ?? Path.Combine(".", "Releases");
-            packagesDir = packagesDir ?? ".";
-            bootstrapperExe = bootstrapperExe ?? Path.Combine(".", "Setup.exe");
+            targetDir ??= Path.Combine(".", "Releases");
+            packagesDir ??= ".";
+            bootstrapperExe ??= Path.Combine(".", "Setup.exe");
 
             if (!Directory.Exists(targetDir)) {
                 Directory.CreateDirectory(targetDir);
@@ -453,7 +453,7 @@ namespace Squirrel.Update
                     baseUrl += "/";
                 }
             }
-            targetDir = targetDir ?? Path.Combine(".", "Releases");
+            targetDir ??= Path.Combine(".", "Releases");
             DirectoryInfo directoryInfo = new DirectoryInfo(targetDir);
             string path = Path.Combine(directoryInfo.FullName, "RELEASES");
             List<ReleaseEntry> list = new List<ReleaseEntry>();
@@ -623,10 +623,9 @@ namespace Squirrel.Update
 
         async Task<string> createSetupEmbeddedZip(string fullPackage, string releasesDir, string backgroundGif, string signingOpts, string setupIcon)
         {
-            string tempPath;
 
             this.Log().Info("Building embedded zip file for Setup.exe");
-            using (Utility.WithTempDirectory(out tempPath, null)) {
+            using (Utility.WithTempDirectory(out var tempPath, null)) {
                 this.ErrorIfThrows(() => {
                     File.Copy(Assembly.GetEntryAssembly().Location.Replace("-Mono.exe", ".exe"), Path.Combine(tempPath, "Update.exe"));
                     File.Copy(fullPackage, Path.Combine(tempPath, Path.GetFileName(fullPackage)));
@@ -866,7 +865,7 @@ namespace Squirrel.Update
 
         static string getAppNameFromDirectory(string path = null)
         {
-            path = path ?? Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            path ??= Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             return (new DirectoryInfo(path)).Name;
         }
 
@@ -912,14 +911,13 @@ namespace Squirrel.Update
 
         public void Raise(int i)
         {
-            if (Progress != null)
-                Progress.Invoke(this, i);
+            Progress?.Invoke(this, i);
         }
     }
 
     class SetupLogLogger : SimpleSplat.ILogger, IDisposable
     {
-        TextWriter inner;
+        readonly TextWriter inner;
         readonly object gate = 42;
         public SimpleSplat.LogLevel Level { get; set; }
 

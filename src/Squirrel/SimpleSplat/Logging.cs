@@ -102,7 +102,7 @@ namespace Squirrel.SimpleSplat
 
         public DefaultLogManager(IDependencyResolver dependencyResolver = null)
         {
-            dependencyResolver = dependencyResolver ?? SquirrelLocator.Current;
+            dependencyResolver ??= SquirrelLocator.Current;
 
             loggerCache = new MemoizingMRUCache<Type, IFullLogger>((type, _) => {
                 var ret = dependencyResolver.GetService<ILogger>();
@@ -180,7 +180,7 @@ namespace Squirrel.SimpleSplat
 
     public static class LogHost
     {
-        static internal bool suppressLogging = false;
+        internal static bool suppressLogging = false;
         static readonly IFullLogger nullLogger = new WrappingFullLogger(new NullLogger(), typeof(string));
 
         /// <summary>

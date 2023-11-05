@@ -19,15 +19,13 @@ namespace Squirrel.Update
         public AnimatedGifWindow()
         {
             var img = new Image();
-            var src = default(BitmapImage);
-
             var executionLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var source = Path.Combine(
                 executionLocation,
                 "background.gif");
 
             if (File.Exists(source)) {
-                src = new BitmapImage();
+                var src = new BitmapImage();
                 src.BeginInit();
                 src.StreamSource = File.OpenRead(source);
                 src.EndInit();

@@ -8,19 +8,19 @@ namespace Squirrel.Update
         private readonly OptionSet optionSet;
 
         internal bool silentInstall { get; private set; } = false;
-        internal UpdateAction updateAction { get; private set; } = default(UpdateAction);
-        internal string target { get; private set; } = default(string);
-        internal string releaseDir { get; private set; } = default(string);
-        internal string packagesDir { get; private set; } = default(string);
-        internal string bootstrapperExe { get; private set; } = default(string);
-        internal string backgroundGif { get; private set; } = default(string);
-        internal string signingParameters { get; private set; } = default(string);
-        internal string baseUrl { get; private set; } = default(string);
-        internal string processStart { get; private set; } = default(string);
-        internal string processStartArgs { get; private set; } = default(string);
-        internal string setupIcon { get; private set; } = default(string);
-        internal string icon { get; private set; } = default(string);
-        internal string shortcutArgs { get; private set; } = default(string);
+        internal UpdateAction updateAction { get; private set; } = default;
+        internal string target { get; private set; } = default;
+        internal string releaseDir { get; private set; } = default;
+        internal string packagesDir { get; private set; } = default;
+        internal string bootstrapperExe { get; private set; } = default;
+        internal string backgroundGif { get; private set; } = default;
+        internal string signingParameters { get; private set; } = default;
+        internal string baseUrl { get; private set; } = default;
+        internal string processStart { get; private set; } = default;
+        internal string processStartArgs { get; private set; } = default;
+        internal string setupIcon { get; private set; } = default;
+        internal string icon { get; private set; } = default;
+        internal string shortcutArgs { get; private set; } = default;
         internal string frameworkVersion { get; private set; } = "net45";
         internal bool shouldWait { get; private set; } = false;
         internal bool noMsi { get; private set; } = (Environment.OSVersion.Platform != PlatformID.Win32NT);        // NB: WiX doesn't work under Mono / Wine
@@ -79,7 +79,7 @@ namespace Squirrel.Update
 
             // NB: setupIcon and icon are just aliases for compatibility
             // reasons, because of a dumb breaking rename I made in 1.0.1
-            setupIcon = setupIcon ?? icon;
+            setupIcon ??= icon;
 
             return opts;
         }

@@ -21,13 +21,11 @@ namespace Squirrel
             IntPtr hProc = OpenProcess((ProcessAccess)0x001F0FFF, false, Process.GetCurrentProcess().Id);
 
             try {
-                int sizeInfoReturned;
-                int queryStatus = NtQueryInformationProcess(hProc, (PROCESSINFOCLASS)0, ref pbi, pbi.Size, out sizeInfoReturned);
+                int queryStatus = NtQueryInformationProcess(hProc, (PROCESSINFOCLASS) 0, ref pbi, pbi.Size, out var sizeInfoReturned);
             } finally {
                 if (!hProc.Equals(IntPtr.Zero)) {
                     //Close handle and free allocated memory
                     CloseHandle(hProc);
-                    hProc = IntPtr.Zero;
                 }
             }
 

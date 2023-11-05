@@ -10,7 +10,7 @@ namespace Squirrel
 #endif
     internal class ResourceReader : IDisposable
     {
-        private IntPtr hModule;
+        private readonly IntPtr hModule;
         const uint LOAD_LIBRARY_AS_DATAFILE = 2;
         private bool _disposed;
 

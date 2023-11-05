@@ -38,7 +38,7 @@ namespace Squirrel.SimpleSplat
             set {
                 if (ModeDetector.InUnitTestRunner()) {
                     unitTestDependencyResolver = value;
-                    dependencyResolver = dependencyResolver ?? value;
+                    dependencyResolver ??= value;
                 } else {
                     dependencyResolver = value;
                 }
@@ -212,7 +212,7 @@ namespace Squirrel.SimpleSplat
     public class ModernDependencyResolver : IMutableDependencyResolver
     {
         Dictionary<Tuple<Type, string>, List<Func<object>>> _registry;
-        Dictionary<Tuple<Type, string>, List<Action<IDisposable>>> _callbackRegistry;
+        readonly Dictionary<Tuple<Type, string>, List<Action<IDisposable>>> _callbackRegistry;
 
         public ModernDependencyResolver() : this(null) { }
 
@@ -265,7 +265,7 @@ namespace Squirrel.SimpleSplat
         public object GetService(Type serviceType, string contract = null)
         {
             var pair = Tuple.Create(serviceType, contract ?? string.Empty);
-            if (!_registry.ContainsKey(pair)) return default(object);
+            if (!_registry.ContainsKey(pair)) return default;
 
             var ret = _registry[pair].Last();
             return ret();

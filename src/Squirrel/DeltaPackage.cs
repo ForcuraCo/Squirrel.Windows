@@ -211,11 +211,9 @@ namespace Squirrel
             Contract.Requires(deltaPackage != null);
             Contract.Requires(!String.IsNullOrEmpty(outputFile) && !File.Exists(outputFile));
 
-            string workingPath;
-            string deltaPath;
 
-            using (Utility.WithTempDirectory(out deltaPath, localAppDirectory))
-            using (Utility.WithTempDirectory(out workingPath, localAppDirectory)) {
+            using (Utility.WithTempDirectory(out var deltaPath, localAppDirectory))
+            using (Utility.WithTempDirectory(out var workingPath, localAppDirectory)) {
                 var opts = new ExtractionOptions() { ExtractFullPath = true, Overwrite = true, PreserveFileTime = true };
 
                 using (var za = ZipArchive.Open(deltaPackage.InputPackageFile))
@@ -292,8 +290,7 @@ namespace Squirrel
             var inputFile = Path.Combine(deltaPath, relativeFilePath);
             var finalTarget = Path.Combine(workingDirectory, Regex.Replace(relativeFilePath, @"\.(bs)?diff$", ""));
 
-            var tempTargetFile = default(string);
-            Utility.WithTempFile(out tempTargetFile, localAppDirectory);
+            Utility.WithTempFile(out var tempTargetFile, localAppDirectory);
 
             try {
                 // NB: Zero-length diffs indicate the file hasn't actually changed

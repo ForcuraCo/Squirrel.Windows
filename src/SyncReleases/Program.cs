@@ -91,7 +91,7 @@ namespace SyncReleases
 
     class SetupLogLogger : Squirrel.SimpleSplat.ILogger, IDisposable
     {
-        StreamWriter inner;
+        readonly StreamWriter inner;
         readonly object gate = 42;
         public Squirrel.SimpleSplat.LogLevel Level { get; set; }
 

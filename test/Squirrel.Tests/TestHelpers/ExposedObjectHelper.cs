@@ -10,7 +10,7 @@ namespace Squirrel.Tests.TestHelpers
 {
     internal class ExposedObjectHelper
     {
-        private static Type s_csharpInvokePropertyType =
+        private static readonly Type s_csharpInvokePropertyType =
             typeof(Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
                 .Assembly
                 .GetType("Microsoft.CSharp.RuntimeBinder.ICSharpInvokeOrInvokeMemberBinder");
@@ -32,14 +32,13 @@ namespace Squirrel.Tests.TestHelpers
                 Type[] bestParams = null;
                 Type[] actualParams = args.Select(p => p == null ? typeof(object) : p.GetType()).ToArray();
 
-                Func<Type[], Type[], bool> isAssignableFrom = (a, b) =>
+                bool isAssignableFrom(Type[] a, Type[] b)
                 {
-                    for (int i = 0; i < a.Length; i++)
-                    {
+                    for (int i = 0; i < a.Length; i++) {
                         if (!a[i].IsAssignableFrom(b[i])) return false;
                     }
                     return true;
-                };
+                }
 
 
                 foreach (var method in instanceMethods.Where(m => m.GetParameters().Length == args.Length))

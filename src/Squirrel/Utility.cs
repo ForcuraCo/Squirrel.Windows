@@ -36,11 +36,12 @@ namespace Squirrel
                 goto done;
             }
 
-            Func<byte[], byte[], bool> matches = (bom, src) => {
+            bool matches(byte[] bom, byte[] src)
+            {
                 if (src.Length < bom.Length) return false;
 
                 return !bom.Where((chr, index) => src[index] != chr).Any();
-            };
+            }
 
             var utf32Be = new byte[] { 0x00, 0x00, 0xFE, 0xFF };
             var utf32Le = new byte[] { 0xFF, 0xFE, 0x00, 0x00 };
@@ -72,7 +73,7 @@ namespace Squirrel
 
         public static bool TryParseEnumU16<TEnum>(ushort enumValue, out TEnum retVal)
         {
-            retVal = default(TEnum);
+            retVal = default;
             bool success = Enum.IsDefined(typeof(TEnum), enumValue);
             if (success) {
                 retVal = (TEnum) Enum.ToObject(typeof(TEnum), enumValue);
@@ -257,7 +258,7 @@ namespace Squirrel
                 }));
         }
 
-        static Lazy<string> directoryChars = new Lazy<string>(() => {
+        static readonly Lazy<string> directoryChars = new Lazy<string>(() => {
             return "abcdefghijklmnopqrstuvwxyz" +
                 Enumerable.Range(0x03B0, 0x03FF - 0x03B0)   // Greek and Coptic
                     .Concat(Enumerable.Range(0x0400, 0x04FF - 0x0400)) // Cyrillic
@@ -277,7 +278,7 @@ namespace Squirrel
         public static DirectoryInfo GetTempDirectory(string localAppDirectory)
         {
             var tempDir = Environment.GetEnvironmentVariable("SQUIRREL_TEMP");
-            tempDir = tempDir ?? Path.Combine(localAppDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SquirrelTemp");
+            tempDir ??= Path.Combine(localAppDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SquirrelTemp");
 
             var di = new DirectoryInfo(tempDir);
             if (!di.Exists) di.Create();
@@ -376,7 +377,7 @@ namespace Squirrel
 
         public static string FindHelperExecutable(string toFind, IEnumerable<string> additionalDirs = null)
         {
-            additionalDirs = additionalDirs ?? Enumerable.Empty<string>();
+            additionalDirs ??= Enumerable.Empty<string>();
             var dirs = (new[] { Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) })
                 .Concat(additionalDirs ?? Enumerable.Empty<string>());
 
@@ -403,8 +404,6 @@ namespace Squirrel
         public static async Task ExtractZipToDirectory(string zipFilePath, string outFolder)
         {
             var sevenZip = Environment.GetEnvironmentVariable("SZA_PATH") ?? find7Zip();
-            var result = default(Tuple<int, string>);
-
             try {
                 var cmd = sevenZip;
                 var args = String.Format("x \"{0}\" -tzip -mmt on -aoa -y -o\"{1}\" *", zipFilePath, outFolder);
@@ -413,7 +412,7 @@ namespace Squirrel
                 //    args = sevenZip + " " + args;
                 //}
 
-                result = await Utility.InvokeProcessAsync(cmd, args, CancellationToken.None);
+                var result = await Utility.InvokeProcessAsync(cmd, args, CancellationToken.None);
                 if (result.Item1 != 0) throw new Exception(result.Item2);
             } catch (Exception ex) {
                 Log().Error($"Failed to extract file {zipFilePath} to {outFolder}\n{ex.Message}");
@@ -424,8 +423,6 @@ namespace Squirrel
         public static async Task CreateZipFromDirectory(string zipFilePath, string inFolder)
         {
             var sevenZip = Environment.GetEnvironmentVariable("SZA_PATH") ?? find7Zip();
-            var result = default(Tuple<int, string>);
-
             try {
                 var cmd = sevenZip;
                 var args = String.Format("a \"{0}\" -tzip -aoa -y -mmt on *", zipFilePath);
@@ -434,7 +431,7 @@ namespace Squirrel
                 //    args = sevenZip + " " + args;
                 //}
 
-                result = await Utility.InvokeProcessAsync(cmd, args, CancellationToken.None, inFolder);
+                var result = await Utility.InvokeProcessAsync(cmd, args, CancellationToken.None, inFolder);
                 if (result.Item1 != 0) throw new Exception(result.Item2);
             } catch (Exception ex) {
                 Log().Error($"Failed to extract file {zipFilePath} to {inFolder}\n{ex.Message}");
@@ -495,8 +492,7 @@ namespace Squirrel
 
         public static bool IsHttpUrl(string urlOrPath)
         {
-            var uri = default(Uri);
-            if (!Uri.TryCreate(urlOrPath, UriKind.Absolute, out uri)) {
+            if (!Uri.TryCreate(urlOrPath, UriKind.Absolute, out var uri)) {
                 return false;
             }
 
@@ -527,8 +523,9 @@ namespace Squirrel
                 query[entry.Key] = entry.Value;
             }
 
-            var builder = new UriBuilder(uri);
-            builder.Query = query.ToString();
+            var builder = new UriBuilder(uri) {
+                Query = query.ToString()
+            };
 
             return builder.Uri;
         }
@@ -550,7 +547,7 @@ namespace Squirrel
             try {
                 await Utility.DeleteDirectory(dir);
             } catch {
-                var message = String.Format("Uninstall failed to delete dir '{0}'", dir);
+                _ = String.Format("Uninstall failed to delete dir '{0}'", dir);
             }
         }
 
@@ -585,7 +582,7 @@ namespace Squirrel
             }
         }
 
-        readonly static string[] peExtensions = new[] { ".exe", ".dll", ".node" };
+        static readonly string[] peExtensions = new[] { ".exe", ".dll", ".node" };
         public static bool FileIsLikelyPEImage(string name)
         {
             var ext = Path.GetExtension(name);
@@ -705,8 +702,7 @@ namespace Squirrel
         static IFullLogger logger;
         static IFullLogger Log()
         {
-            return logger ??
-                (logger = SquirrelLocator.CurrentMutable.GetService<ILogManager>().GetLogger(typeof(Utility)));
+            return logger ??= SquirrelLocator.CurrentMutable.GetService<ILogManager>().GetLogger(typeof(Utility));
         }
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
@@ -798,9 +794,7 @@ namespace Squirrel
 
         static void SwapBytes(byte[] guid, int left, int right)
         {
-            byte temp = guid[left];
-            guid[left] = guid[right];
-            guid[right] = temp;
+            (guid[right], guid[left]) = (guid[left], guid[right]);
         }
     }
 
@@ -888,7 +882,7 @@ namespace Squirrel
             }
 
             var disp = Interlocked.Exchange(ref handle, null);
-            if (disp != null) disp.Dispose();
+            disp?.Dispose();
         }
 
         ~SingleGlobalInstance()

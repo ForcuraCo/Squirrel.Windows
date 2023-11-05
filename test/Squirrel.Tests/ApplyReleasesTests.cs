@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -32,11 +32,9 @@ namespace Squirrel.Tests
         [Fact]
         public async Task CleanInstallRunsSquirrelAwareAppsWithInstallFlag()
         {
-            string tempDir;
-            string remotePkgDir;
 
-            using (Utility.WithTempDirectory(out tempDir))
-            using (Utility.WithTempDirectory(out remotePkgDir)) {
+            using (Utility.WithTempDirectory(out var tempDir))
+            using (Utility.WithTempDirectory(out var remotePkgDir)) {
                 IntegrationTestHelper.CreateFakeInstalledApp("0.1.0", remotePkgDir);
                 var pkgs = ReleaseEntry.BuildReleasesFile(remotePkgDir);
                 ReleaseEntry.WriteReleaseFile(pkgs, Path.Combine(remotePkgDir, "RELEASES"));
@@ -61,11 +59,9 @@ namespace Squirrel.Tests
         [Fact]
         public async Task UpgradeRunsSquirrelAwareAppsWithUpgradeFlag()
         {
-            string tempDir;
-            string remotePkgDir;
 
-            using (Utility.WithTempDirectory(out tempDir))
-            using (Utility.WithTempDirectory(out remotePkgDir)) {
+            using (Utility.WithTempDirectory(out var tempDir))
+            using (Utility.WithTempDirectory(out var remotePkgDir)) {
                 IntegrationTestHelper.CreateFakeInstalledApp("0.1.0", remotePkgDir);
                 var pkgs = ReleaseEntry.BuildReleasesFile(remotePkgDir);
                 ReleaseEntry.WriteReleaseFile(pkgs, Path.Combine(remotePkgDir, "RELEASES"));
@@ -97,11 +93,9 @@ namespace Squirrel.Tests
         [Fact]
         public async Task RunningUpgradeAppTwiceDoesntCrash()
         {
-            string tempDir;
-            string remotePkgDir;
 
-            using (Utility.WithTempDirectory(out tempDir))
-            using (Utility.WithTempDirectory(out remotePkgDir)) {
+            using (Utility.WithTempDirectory(out var tempDir))
+            using (Utility.WithTempDirectory(out var remotePkgDir)) {
                 IntegrationTestHelper.CreateFakeInstalledApp("0.1.0", remotePkgDir);
                 var pkgs = ReleaseEntry.BuildReleasesFile(remotePkgDir);
                 ReleaseEntry.WriteReleaseFile(pkgs, Path.Combine(remotePkgDir, "RELEASES"));
@@ -134,11 +128,9 @@ namespace Squirrel.Tests
         [Fact]
         public async Task FullUninstallRemovesAllVersions()
         {
-            string tempDir;
-            string remotePkgDir;
 
-            using (Utility.WithTempDirectory(out tempDir))
-            using (Utility.WithTempDirectory(out remotePkgDir)) {
+            using (Utility.WithTempDirectory(out var tempDir))
+            using (Utility.WithTempDirectory(out var remotePkgDir)) {
                 IntegrationTestHelper.CreateFakeInstalledApp("0.1.0", remotePkgDir);
                 var pkgs = ReleaseEntry.BuildReleasesFile(remotePkgDir);
                 ReleaseEntry.WriteReleaseFile(pkgs, Path.Combine(remotePkgDir, "RELEASES"));
@@ -172,8 +164,7 @@ namespace Squirrel.Tests
         [Fact]
         public void WhenNoNewReleasesAreAvailableTheListIsEmpty()
         {
-            string tempDir;
-            using (Utility.WithTempDirectory(out tempDir)) {
+            using (Utility.WithTempDirectory(out var tempDir)) {
                 var appDir = Directory.CreateDirectory(Path.Combine(tempDir, "theApp"));
                 var packages = Path.Combine(appDir.FullName, "packages");
                 Directory.CreateDirectory(packages);
@@ -193,9 +184,7 @@ namespace Squirrel.Tests
         [Fact]
         public void ThrowsWhenOnlyDeltaReleasesAreAvailable()
         {
-            string tempDir;
-            using (Utility.WithTempDirectory(out tempDir))
-            {
+            using (Utility.WithTempDirectory(out var tempDir)) {
                 var appDir = Directory.CreateDirectory(Path.Combine(tempDir, "theApp"));
                 var packages = Path.Combine(appDir.FullName, "packages");
                 Directory.CreateDirectory(packages);
@@ -220,9 +209,8 @@ namespace Squirrel.Tests
         [Fact]
         public async Task ApplyReleasesWithOneReleaseFile()
         {
-            string tempDir;
 
-            using (Utility.WithTempDirectory(out tempDir)) {
+            using (Utility.WithTempDirectory(out var tempDir)) {
                 string appDir = Path.Combine(tempDir, "theApp");
                 string packagesDir = Path.Combine(appDir, "packages");
                 Directory.CreateDirectory(packagesDir);
@@ -269,9 +257,8 @@ namespace Squirrel.Tests
         [Fact]
         public async Task ApplyReleaseWhichRemovesAFile()
         {
-            string tempDir;
 
-            using (Utility.WithTempDirectory(out tempDir)) {
+            using (Utility.WithTempDirectory(out var tempDir)) {
                 string appDir = Path.Combine(tempDir, "theApp");
                 string packagesDir = Path.Combine(appDir, "packages");
                 Directory.CreateDirectory(packagesDir);
@@ -317,10 +304,8 @@ namespace Squirrel.Tests
         [Fact]
         public async Task ApplyReleaseWhichMovesAFileToADifferentDirectory()
         {
-            string tempDir;
 
-            using (Utility.WithTempDirectory(out tempDir))
-            {
+            using (Utility.WithTempDirectory(out var tempDir)) {
                 string appDir = Path.Combine(tempDir, "theApp");
                 string packagesDir = Path.Combine(appDir, "packages");
                 Directory.CreateDirectory(packagesDir);
@@ -368,9 +353,8 @@ namespace Squirrel.Tests
         [Fact]
         public async Task ApplyReleasesWithDeltaReleases()
         {
-            string tempDir;
 
-            using (Utility.WithTempDirectory(out tempDir)) {
+            using (Utility.WithTempDirectory(out var tempDir)) {
                 string appDir = Path.Combine(tempDir, "theApp");
                 string packagesDir = Path.Combine(appDir, "packages");
                 Directory.CreateDirectory(packagesDir);
@@ -419,8 +403,7 @@ namespace Squirrel.Tests
         [Fact]
         public async Task CreateFullPackagesFromDeltaSmokeTest()
         {
-            string tempDir;
-            using (Utility.WithTempDirectory(out tempDir)) {
+            using (Utility.WithTempDirectory(out var tempDir)) {
                 string appDir = Path.Combine(tempDir, "theApp");
                 string packagesDir = Path.Combine(appDir, "packages");
                 Directory.CreateDirectory(packagesDir);
@@ -436,10 +419,9 @@ namespace Squirrel.Tests
                 var baseEntry = ReleaseEntry.GenerateFromFile(Path.Combine(tempDir, "theApp", "packages", "Squirrel.Core.1.0.0.0-full.nupkg"));
                 var deltaEntry = ReleaseEntry.GenerateFromFile(Path.Combine(tempDir, "theApp", "packages", "Squirrel.Core.1.1.0.0-delta.nupkg"));
 
-                var resultObs = (Task<ReleaseEntry>)fixture.GetType().GetMethod("createFullPackagesFromDeltas", BindingFlags.NonPublic | BindingFlags.Instance)
-                    .Invoke(fixture, new object[] { new[] {deltaEntry}, baseEntry, null });
 
-                var result = await resultObs;
+                var result = await (Task<ReleaseEntry>) fixture.GetType().GetMethod("createFullPackagesFromDeltas", BindingFlags.NonPublic | BindingFlags.Instance)
+                    .Invoke(fixture, new object[] { new[] { deltaEntry }, baseEntry, null });
                 var zp = new ZipPackage(Path.Combine(tempDir, "theApp", "packages", result.Filename));
                 zp.Version.ToString().ShouldEqual("1.1.0.0");
             }
@@ -448,11 +430,9 @@ namespace Squirrel.Tests
         [Fact]
         public async Task CreateShortcutsRoundTrip()
         {
-            string remotePkgPath;
-            string path;
 
-            using (Utility.WithTempDirectory(out path)) {
-                using (Utility.WithTempDirectory(out remotePkgPath))
+            using (Utility.WithTempDirectory(out var path)) {
+                using (Utility.WithTempDirectory(out var remotePkgPath))
                 using (var mgr = new UpdateManager(remotePkgPath, "theApp", path)) {
                     IntegrationTestHelper.CreateFakeInstalledApp("1.0.0.1", remotePkgPath);
                     await mgr.FullInstall();
@@ -485,11 +465,9 @@ namespace Squirrel.Tests
         [Fact(Skip = "This test is currently failing in CI")]
         public async Task GetShortcutsSmokeTest()
         {
-            string remotePkgPath;
-            string path;
 
-            using (Utility.WithTempDirectory(out path)) {
-                using (Utility.WithTempDirectory(out remotePkgPath))
+            using (Utility.WithTempDirectory(out var path)) {
+                using (Utility.WithTempDirectory(out var remotePkgPath))
                 using (var mgr = new UpdateManager(remotePkgPath, "theApp", path)) {
                     IntegrationTestHelper.CreateFakeInstalledApp("1.0.0.1", remotePkgPath);
                     await mgr.FullInstall();

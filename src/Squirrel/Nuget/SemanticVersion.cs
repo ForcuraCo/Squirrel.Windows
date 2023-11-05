@@ -147,8 +147,7 @@ namespace Squirrel
                 throw new ArgumentException("Argument_Cannot_Be_Null_Or_Empty", "version");
             }
 
-            SemanticVersion semVer;
-            if (!TryParse(version, out semVer)) {
+            if (!TryParse(version, out var semVer)) {
                 throw new ArgumentException(String.Format(CultureInfo.CurrentCulture, "InvalidVersionString", version), "version");
             }
             return semVer;
@@ -178,8 +177,7 @@ namespace Squirrel
             }
 
             var match = regex.Match(version.Trim());
-            Version versionValue;
-            if (!match.Success || !Version.TryParse(match.Groups["Version"].Value, out versionValue)) {
+            if (!match.Success || !Version.TryParse(match.Groups["Version"].Value, out var versionValue)) {
                 return false;
             }
 
@@ -193,8 +191,7 @@ namespace Squirrel
         /// <returns>An instance of SemanticVersion if it parses correctly, null otherwise.</returns>
         public static SemanticVersion ParseOptionalVersion(string version)
         {
-            SemanticVersion semVer;
-            TryParse(version, out semVer);
+            TryParse(version, out var semVer);
             return semVer;
         }
 

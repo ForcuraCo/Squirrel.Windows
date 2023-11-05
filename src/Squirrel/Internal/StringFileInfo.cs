@@ -53,8 +53,7 @@ namespace Squirrel
         // Item3 = Value
         public static IEnumerable<(uint CodePage, string Key, string Value)> ReadVersionInfo(string fileName, out StringFileInfo vi)
         {
-            int num;
-            int size = GetFileVersionInfoSize(fileName, out num);
+            int size = GetFileVersionInfoSize(fileName, out _);
 
             if (size == 0) {
                 throw new Win32Exception();
@@ -77,9 +76,8 @@ namespace Squirrel
         // Item3 = Value
         public static IEnumerable<(uint CodePage, string Key, string Value)> ReadVersionInfo(byte[] buffer, out StringFileInfo vi)
         {
-            int offset;
             // The offset calculated here is unused
-            var fibs = ReadFileInfoBaseStruct(buffer, 0, out offset);
+            var fibs = ReadFileInfoBaseStruct(buffer, 0, out _);
 
             if (fibs.Key != "VS_VERSION_INFO") {
                 throw new Exception(fibs.Key);
@@ -93,7 +91,7 @@ namespace Squirrel
                     throw new Exception(signature.ToString("X8"));
                 }
 
-                uint strucVersion = BitConverter.ToUInt32(buffer, fibs.ValueOffset + 4);
+                _ = BitConverter.ToUInt32(buffer, fibs.ValueOffset + 4);
 
                 var fileVersion = new Version(BitConverter.ToUInt16(buffer, fibs.ValueOffset + 10), BitConverter.ToUInt16(buffer, fibs.ValueOffset + 8), BitConverter.ToUInt16(buffer, fibs.ValueOffset + 14), BitConverter.ToUInt16(buffer, fibs.ValueOffset + 12));
                 var productVersion = new Version(BitConverter.ToUInt16(buffer, fibs.ValueOffset + 18), BitConverter.ToUInt16(buffer, fibs.ValueOffset + 16), BitConverter.ToUInt16(buffer, fibs.ValueOffset + 22), BitConverter.ToUInt16(buffer, fibs.ValueOffset + 20));
@@ -123,26 +121,23 @@ namespace Squirrel
             int sfiOrValOffset = (fibs.ValueOffset + fibs.ValueLength + 3) & (~3);
 
             while (sfiOrValOffset < fibs.Length) {
-                int nextSfiOrValOffset;
 
-                var sfiOrVal = ReadFileInfoBaseStruct(buffer, sfiOrValOffset, out nextSfiOrValOffset);
+                var sfiOrVal = ReadFileInfoBaseStruct(buffer, sfiOrValOffset, out var nextSfiOrValOffset);
 
                 if (sfiOrVal.Key == "StringFileInfo") {
                     int stOffset = sfiOrVal.ValueOffset;
 
                     while (stOffset < sfiOrVal.EndOffset) {
-                        int nextStOffset;
 
-                        var st = ReadFileInfoBaseStruct(buffer, stOffset, out nextStOffset);
+                        var st = ReadFileInfoBaseStruct(buffer, stOffset, out var nextStOffset);
 
                         uint langCharset = uint.Parse(st.Key, NumberStyles.HexNumber);
 
                         int striOffset = st.ValueOffset;
 
                         while (striOffset < st.EndOffset) {
-                            int nextStriOffset;
 
-                            var stri = ReadFileInfoBaseStruct(buffer, striOffset, out nextStriOffset);
+                            var stri = ReadFileInfoBaseStruct(buffer, striOffset, out var nextStriOffset);
 
                             // Here stri.ValueLength is in words!
                             int len = FindLengthUnicodeSZ(buffer, stri.ValueOffset, stri.ValueOffset + (stri.ValueLength * 2));
@@ -159,9 +154,8 @@ namespace Squirrel
                     int varOffset = sfiOrVal.ValueOffset;
 
                     while (varOffset < sfiOrVal.EndOffset) {
-                        int nextVarOffset;
 
-                        var var = ReadFileInfoBaseStruct(buffer, varOffset, out nextVarOffset);
+                        var var = ReadFileInfoBaseStruct(buffer, varOffset, out var nextVarOffset);
 
                         if (var.Key != "Translation") {
                             throw new Exception(var.Key);
@@ -174,7 +168,7 @@ namespace Squirrel
                                 // We invert the order suggested by the Var description!
                                 uint high = (uint) BitConverter.ToInt16(buffer, langOffset);
                                 uint low = (uint) BitConverter.ToInt16(buffer, langOffset + 2);
-                                uint lang = (high << 16) | low;
+                                _ = (high << 16) | low;
 
                                 langOffset += 4;
                             }

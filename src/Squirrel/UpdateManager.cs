@@ -132,8 +132,7 @@ namespace Squirrel
 
         public SemanticVersion CurrentlyInstalledVersion(string executable = null)
         {
-            executable = executable ??
-                Path.GetDirectoryName(typeof(UpdateManager).Assembly.Location);
+            executable ??= Path.GetDirectoryName(typeof(UpdateManager).Assembly.Location);
 
             // check if the application to check is in the correct application directory
             if (!Utility.IsFileInDirectory(executable, rootAppDirectory))
@@ -176,9 +175,7 @@ namespace Squirrel
         public void Dispose()
         {
             var disp = Interlocked.Exchange(ref updateLock, null);
-            if (disp != null) {
-                disp.Dispose();
-            }
+            disp?.Dispose();
         }
 
         static bool exiting = false;
@@ -196,7 +193,7 @@ namespace Squirrel
             //    launching a different version than we started with (this is why
             //    we take the app's *name* rather than a full path)
 
-            exeToStart = exeToStart ?? Path.GetFileName(Assembly.GetEntryAssembly().Location);
+            exeToStart ??= Path.GetFileName(Assembly.GetEntryAssembly().Location);
             var argsArg = arguments != null ?
                 String.Format("-a \"{0}\"", arguments) : "";
 
@@ -224,7 +221,7 @@ namespace Squirrel
             //    launching a different version than we started with (this is why
             //    we take the app's *name* rather than a full path)
 
-            exeToStart = exeToStart ?? Path.GetFileName(Assembly.GetEntryAssembly().Location);
+            exeToStart ??= Path.GetFileName(Assembly.GetEntryAssembly().Location);
             var argsArg = arguments != null ?
                 String.Format("-a \"{0}\"", arguments) : "";
 
@@ -251,7 +248,7 @@ namespace Squirrel
                 return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             }
 
-            assemblyLocation = assemblyLocation ?? assembly.Location;
+            assemblyLocation ??= assembly.Location;
 
             if (Path.GetFileName(assemblyLocation).Equals("update.exe", StringComparison.OrdinalIgnoreCase)) {
                 // NB: Both the "SquirrelTemp" case and the "App's folder" case 

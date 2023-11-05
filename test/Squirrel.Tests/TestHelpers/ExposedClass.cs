@@ -10,9 +10,9 @@ namespace Squirrel.Tests.TestHelpers
 {
     public class ExposedClass : DynamicObject
     {
-        private Type m_type;
-        private Dictionary<string, Dictionary<int, List<MethodInfo>>> m_staticMethods;
-        private Dictionary<string, Dictionary<int, List<MethodInfo>>> m_genStaticMethods;
+        private readonly Type m_type;
+        private readonly Dictionary<string, Dictionary<int, List<MethodInfo>>> m_staticMethods;
+        private readonly Dictionary<string, Dictionary<int, List<MethodInfo>>> m_genStaticMethods;
 
         private ExposedClass(Type type)
         {

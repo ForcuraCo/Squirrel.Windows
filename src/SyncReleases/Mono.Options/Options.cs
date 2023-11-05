@@ -237,8 +237,8 @@ namespace Mono.Options
 
 	public class OptionValueCollection : IList, IList<string> {
 
-		List<string> values = new List<string> ();
-		OptionContext c;
+        readonly List<string> values = new List<string> ();
+        readonly OptionContext c;
 
 		internal OptionValueCollection (OptionContext c)
 		{
@@ -329,8 +329,8 @@ namespace Mono.Options
 		private Option                option;
 		private string                name;
 		private int                   index;
-		private OptionSet             set;
-		private OptionValueCollection c;
+		private readonly OptionSet             set;
+		private readonly OptionValueCollection c;
 
 		public OptionContext (OptionSet set)
 		{
@@ -369,12 +369,12 @@ namespace Mono.Options
 	}
 
 	public abstract class Option {
-		string prototype, description;
-		string[] names;
-		OptionValueType type;
-		int count;
+        readonly string prototype, description;
+        readonly string[] names;
+        readonly OptionValueType type;
+        readonly int count;
 		string[] separators;
-		bool hidden;
+        readonly bool hidden;
 
 		protected Option (string prototype, string description)
 			: this (prototype, description, 1, false)
@@ -453,7 +453,7 @@ namespace Mono.Options
 				tt.GetGenericTypeDefinition () == typeof (Nullable<>);
 			Type targetType = nullable ? tt.GetGenericArguments () [0] : typeof (T);
 			TypeConverter conv = TypeDescriptor.GetConverter (targetType);
-			T t = default (T);
+			T t = default;
 			try {
 				if (value != null)
 					t = (T) conv.ConvertFromString (value);
@@ -650,7 +650,7 @@ namespace Mono.Options
 
 	[Serializable]
 	public class OptionException : Exception {
-		private string option;
+		private readonly string option;
 
 		public OptionException ()
 		{
@@ -701,14 +701,14 @@ namespace Mono.Options
 			this.roSources = new ReadOnlyCollection<ArgumentSource>(sources);
 		}
 
-		Converter<string, string> localizer;
+        readonly Converter<string, string> localizer;
 
 		public Converter<string, string> MessageLocalizer {
 			get {return localizer;}
 		}
 
-		List<ArgumentSource> sources = new List<ArgumentSource> ();
-		ReadOnlyCollection<ArgumentSource> roSources;
+        readonly List<ArgumentSource> sources = new List<ArgumentSource> ();
+        readonly ReadOnlyCollection<ArgumentSource> roSources;
 
 		public ReadOnlyCollection<ArgumentSource> ArgumentSources {
 			get {return roSources;}
@@ -812,7 +812,7 @@ namespace Mono.Options
 		}
 
 		sealed class ActionOption : Option {
-			Action<OptionValueCollection> action;
+            readonly Action<OptionValueCollection> action;
 
 			public ActionOption (string prototype, string description, int count, Action<OptionValueCollection> action)
 				: this (prototype, description, count, action, false)
@@ -873,7 +873,7 @@ namespace Mono.Options
 		}
 
 		sealed class ActionOption<T> : Option {
-			Action<T> action;
+            readonly Action<T> action;
 
 			public ActionOption (string prototype, string description, Action<T> action)
 				: base (prototype, description, 1)
@@ -890,7 +890,7 @@ namespace Mono.Options
 		}
 
 		sealed class ActionOption<TKey, TValue> : Option {
-			OptionAction<TKey, TValue> action;
+            readonly OptionAction<TKey, TValue> action;
 
 			public ActionOption (string prototype, string description, OptionAction<TKey, TValue> action)
 				: base (prototype, description, 2)
@@ -966,13 +966,12 @@ namespace Mono.Options
 				if (!Parse (argument, c))
 					Unprocessed (unprocessed, def, c, argument);
 			}
-			if (c.Option != null)
-				c.Option.Invoke (c);
+			c.Option?.Invoke (c);
 			return unprocessed;
 		}
 
 		class ArgumentEnumerator : IEnumerable<string> {
-			List<IEnumerator<string>> sources = new List<IEnumerator<string>> ();
+            readonly List<IEnumerator<string>> sources = new List<IEnumerator<string>> ();
 
 			public ArgumentEnumerator (IEnumerable<string> arguments)
 			{
@@ -1006,10 +1005,9 @@ namespace Mono.Options
 		bool AddSource (ArgumentEnumerator ae, string argument)
 		{
 			foreach (ArgumentSource source in sources) {
-				IEnumerable<string> replacement;
-				if (!source.GetArguments (argument, out replacement))
-					continue;
-				ae.Add (replacement);
+                if (!source.GetArguments(argument, out var replacement))
+                    continue;
+                ae.Add (replacement);
 				return true;
 			}
 			return false;
@@ -1056,11 +1054,10 @@ namespace Mono.Options
 				return true;
 			}
 
-			string f, n, s, v;
-			if (!GetOptionParts (argument, out f, out n, out s, out v))
-				return false;
+            if (!GetOptionParts(argument, out var f, out var n, out var s, out var v))
+                return false;
 
-			Option p;
+            Option p;
 			if (Contains (n)) {
 				p = this [n];
 				c.OptionName = f + n;

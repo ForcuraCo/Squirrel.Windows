@@ -55,7 +55,7 @@ namespace Squirrel
         public string CreateReleasePackage(string outputFile, string packagesRootDir = null, Func<string, string> releaseNotesProcessor = null, Action<string> contentsPostProcessHook = null)
         {
             Contract.Requires(!String.IsNullOrEmpty(outputFile));
-            releaseNotesProcessor = releaseNotesProcessor ?? (x => (new Markdown()).Transform(x));
+            releaseNotesProcessor ??= (x => (new Markdown()).Transform(x));
 
             if (ReleasePackageFile != null) {
                 return ReleasePackageFile;
@@ -262,7 +262,7 @@ namespace Squirrel
             xdoc.Save(specPath);
         }
 
-        static internal void addDeltaFilesToContentTypes(string rootDirectory)
+        internal static void addDeltaFilesToContentTypes(string rootDirectory)
         {
             var doc = new XmlDocument();
             var path = Path.Combine(rootDirectory, "[Content_Types].xml");

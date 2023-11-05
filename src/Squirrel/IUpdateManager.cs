@@ -144,7 +144,7 @@ namespace Squirrel
     {
         public static async Task<ReleaseEntry> UpdateApp(this IUpdateManager This, Action<int> progress = null)
         {
-            progress = progress ?? (_ => {});
+            progress ??= (_ => {});
             This.Log().Info("Starting automatic update");
 
             bool ignoreDeltaUpdates = false;
@@ -178,7 +178,7 @@ namespace Squirrel
 
             return updateInfo.ReleasesToApply.Any() ?
                 updateInfo.ReleasesToApply.MaxBy(x => x.Version).Last() :
-                default(ReleaseEntry);
+                default;
         }
 
         public static void CreateShortcutForThisExe(this IUpdateManager This)

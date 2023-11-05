@@ -29,7 +29,7 @@ namespace Squirrel
 
             public async Task<string> ApplyReleases(UpdateInfo updateInfo, bool silentInstall, bool attemptingFullInstall, Action<int> progress = null)
             {
-                progress = progress ?? (_ => { });
+                progress ??= (_ => { });
 
                 progress(0);
 
@@ -90,8 +90,7 @@ namespace Squirrel
                 progress(98);
 
                 try {
-                    var currentVersion = updateInfo.CurrentlyInstalledVersion != null ?
-                        updateInfo.CurrentlyInstalledVersion.Version : null;
+                    var currentVersion = updateInfo.CurrentlyInstalledVersion?.Version;
 
                     await cleanDeadVersions(currentVersion, newVersion);
                 } catch (Exception ex) {
@@ -334,7 +333,7 @@ namespace Squirrel
             {
                 Contract.Requires(releasesToApply != null);
 
-                progress = progress ?? new ApplyReleasesProgress(releasesToApply.Count(), x => { });
+                progress ??= new ApplyReleasesProgress(releasesToApply.Count(), x => { });
 
                 // If there are no remote releases at all, bail
                 if (!releasesToApply.Any()) {
@@ -565,8 +564,8 @@ namespace Squirrel
                     } catch (Exception e) {
                         this.Log().WarnException("Couldn't rewrite shim RegKey, most likely no apps are shimmed", e);
                     } finally {
-                        if (regKey != null) regKey.Dispose();
-                        if (baseKey != null) baseKey.Dispose();
+                        regKey?.Dispose();
+                        baseKey?.Dispose();
                     }
                 });
             }

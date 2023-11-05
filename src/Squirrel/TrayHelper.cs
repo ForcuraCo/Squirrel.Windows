@@ -161,9 +161,8 @@ namespace Squirrel
         {
             var notifier = (ITrayNotify)instance;
             var callback = new NotificationCb();
-            var handle = default(ulong);
 
-            notifier.RegisterCallback(callback, out handle);
+            notifier.RegisterCallback(callback, out var handle);
             notifier.UnregisterCallback(handle);
             return callback.items;
         }

@@ -81,14 +81,13 @@ namespace Squirrel.SimpleSplat
         {
             Contract.Requires(key != null);
 
-            Tuple<LinkedListNode<TParam>, TVal> output;
-            var ret = cacheEntries.TryGetValue(key, out output);
+            var ret = cacheEntries.TryGetValue(key, out var output);
             if (ret && output != null) {
                 cacheMRUList.Remove(output.Item1);
                 cacheMRUList.AddFirst(output.Item1);
                 result = output.Item2;
             } else {
-                result = default(TVal);
+                result = default;
             }
             return ret;
         }

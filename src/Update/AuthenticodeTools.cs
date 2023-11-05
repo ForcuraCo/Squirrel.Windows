@@ -159,7 +159,7 @@ namespace Squirrel.Update
         public TrustProviderFlags dwProvFlags;
         public UIContext dwUIContext;
 
-        IntPtr pwszURLReference;
+        readonly IntPtr pwszURLReference;
         
         public void Dispose()
         {
@@ -186,7 +186,7 @@ namespace Squirrel.Update
     internal sealed class UnmanagedPointer : IDisposable
     {
         IntPtr m_ptr;
-        AllocMethod m_meth;
+        readonly AllocMethod m_meth;
 
         internal UnmanagedPointer(IntPtr ptr, AllocMethod method)
         {

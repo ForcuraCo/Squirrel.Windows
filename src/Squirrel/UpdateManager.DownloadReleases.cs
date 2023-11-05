@@ -21,8 +21,8 @@ namespace Squirrel
 
             public async Task DownloadReleases(string updateUrlOrPath, IEnumerable<ReleaseEntry> releasesToDownload, Action<int> progress = null, IFileDownloader urlDownloader = null)
             {
-                progress = progress ?? (_ => { });
-                urlDownloader = urlDownloader ?? new FileDownloader();
+                progress ??= (_ => { });
+                urlDownloader ??= new FileDownloader();
                 var packagesDirectory = Path.Combine(rootAppDirectory, "packages");
 
                 double current = 0;

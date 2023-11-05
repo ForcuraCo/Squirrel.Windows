@@ -88,9 +88,7 @@ namespace Squirrel.Tests
         public void Dispose()
         {
             var toDispose = Interlocked.Exchange(ref inner, null);
-            if (toDispose != null) {
-                toDispose.Dispose();
-            }
+            toDispose?.Dispose();
         }
     }
 }

@@ -98,8 +98,7 @@ namespace Squirrel.Tests.Core
         [Fact(Skip="This test takes forever")]
         public void CanDeleteDeepRecursiveDirectoryStructure()
         {
-            string tempDir;
-            using (Utility.WithTempDirectory(out tempDir)) {
+            using (Utility.WithTempDirectory(out var tempDir)) {
                 for (var i = 0; i < 50; i++) {
                     var directory = Path.Combine(tempDir, newId());
                     CreateSampleDirectory(directory);
@@ -124,8 +123,7 @@ namespace Squirrel.Tests.Core
         [Fact]
         public void CreateFakePackageSmokeTest()
         {
-            string path;
-            using (Utility.WithTempDirectory(out path)) {
+            using (Utility.WithTempDirectory(out var path)) {
                 var output = IntegrationTestHelper.CreateFakeInstalledApp("0.3.0", path);
                 Assert.True(File.Exists(output));
             }

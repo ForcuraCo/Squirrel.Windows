@@ -86,7 +86,7 @@ namespace Squirrel.Shell
             /// Called to properly clean up the memory referenced by a PropVariant instance.
             /// </summary>
             [DllImport("ole32.dll")]
-            private extern static int PropVariantClear(ref PropVariant pvar);
+            private static extern int PropVariantClear(ref PropVariant pvar);
 
             /// <summary>
             /// Called to clear the PropVariant's referenced and local memory.
@@ -559,15 +559,12 @@ namespace Squirrel.Shell
 
         Icon getIcon(bool large)
         {
-            // Get icon index and path:
-            int iconIndex = 0;
             StringBuilder iconPath = new StringBuilder(260, 260);
-            if (linkA == null)
-            {
+            // Get icon index and path:
+            int iconIndex;
+            if (linkA == null) {
                 linkW.GetIconLocation(iconPath, iconPath.Capacity, out iconIndex);
-            }
-            else
-            {
+            } else {
                 linkA.GetIconLocation(iconPath, iconPath.Capacity, out iconIndex);
             }
             string iconFile = iconPath.ToString();
@@ -582,11 +579,11 @@ namespace Squirrel.Shell
                         FileIcon.SHGetFileInfoConstants.SHGFI_ATTRIBUTES;
                 if (large)
                 {
-                    flags = flags | FileIcon.SHGetFileInfoConstants.SHGFI_LARGEICON;
+                    flags |= FileIcon.SHGetFileInfoConstants.SHGFI_LARGEICON;
                 }
                 else
                 {
-                    flags = flags | FileIcon.SHGetFileInfoConstants.SHGFI_SMALLICON;
+                    flags |= FileIcon.SHGetFileInfoConstants.SHGFI_SMALLICON;
                 }
                 FileIcon fileIcon = new FileIcon(Target, flags);
                 return fileIcon.ShellIcon;
@@ -595,10 +592,9 @@ namespace Squirrel.Shell
             {
                 // Use ExtractIconEx to get the icon:
                 IntPtr[] hIconEx = new IntPtr[1] { IntPtr.Zero };
-                int iconCount = 0;
                 if (large)
                 {
-                    iconCount = UnManagedMethods.ExtractIconEx(
+                    _ = UnManagedMethods.ExtractIconEx(
                         iconFile,
                         iconIndex,
                         hIconEx,
@@ -607,7 +603,7 @@ namespace Squirrel.Shell
                 }
                 else
                 {
-                    iconCount = UnManagedMethods.ExtractIconEx(
+                    _ = UnManagedMethods.ExtractIconEx(
                         iconFile,
                         iconIndex,
                         null,
@@ -633,23 +629,22 @@ namespace Squirrel.Shell
             get
             {
                 StringBuilder iconPath = new StringBuilder(260, 260);
-                int iconIndex = 0;
                 if (linkA == null)
                 {
                     linkW.GetIconLocation(iconPath, iconPath.Capacity, out
-                        iconIndex);
+                        _);
                 }
                 else
                 {
                     linkA.GetIconLocation(iconPath, iconPath.Capacity, out
-                        iconIndex);
+                        _);
                 }
                 return iconPath.ToString();
             }
             set
             {
                 StringBuilder iconPath = new StringBuilder(260, 260);
-                int iconIndex = 0;
+                int iconIndex;
                 if (linkA == null)
                 {
                     linkW.GetIconLocation(iconPath, iconPath.Capacity, out
@@ -679,7 +674,7 @@ namespace Squirrel.Shell
             get
             {
                 StringBuilder iconPath = new StringBuilder(260, 260);
-                int iconIndex = 0;
+                int iconIndex;
                 if (linkA == null)
                 {
                     linkW.GetIconLocation(iconPath, iconPath.Capacity, out
@@ -695,16 +690,15 @@ namespace Squirrel.Shell
             set
             {
                 StringBuilder iconPath = new StringBuilder(260, 260);
-                int iconIndex = 0;
                 if (linkA == null)
                 {
                     linkW.GetIconLocation(iconPath, iconPath.Capacity, out
-                        iconIndex);
+                        _);
                 }
                 else
                 {
                     linkA.GetIconLocation(iconPath, iconPath.Capacity, out
-                        iconIndex);
+                        _);
                 }
                 if (linkA == null)
                 {
@@ -853,7 +847,7 @@ namespace Squirrel.Shell
         {
             get
             {
-                uint cmd = 0;
+                uint cmd;
                 if (linkA == null)
                 {
                     linkW.GetShowCmd(out cmd);
@@ -884,7 +878,7 @@ namespace Squirrel.Shell
         {
             get
             {
-                short key = 0;
+                short key;
                 if (linkA == null)
                 {
                     linkW.GetHotkey(out key);

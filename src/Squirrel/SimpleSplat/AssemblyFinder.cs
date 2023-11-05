@@ -23,7 +23,7 @@ namespace Squirrel.SimpleSplat
                 return (T)Activator.CreateInstance(type);
             }
 
-            return default(T);
+            return default;
         }
     }
 }

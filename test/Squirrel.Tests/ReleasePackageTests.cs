@@ -47,9 +47,7 @@ namespace Squirrel.Tests.Core
         public void SemanticVersionDoesWhatIWant()
         {
             var sv = new SemanticVersion("1.2.3.4");
-            var dontcare = default(SemanticVersion);
-
-            Assert.False(SemanticVersion.TryParseStrict(sv.ToString(), out dontcare));
+            Assert.False(SemanticVersion.TryParseStrict(sv.ToString(), out _));
         }
 
         [Fact]

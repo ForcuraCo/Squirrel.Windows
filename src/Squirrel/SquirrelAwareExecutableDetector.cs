@@ -163,8 +163,7 @@ namespace Squirrel
 
                     if (attribute == null) return null;
 
-                    int result;
-                    if (!Int32.TryParse(attribute.ConstructorArguments[1].Value.ToString(), NumberStyles.Integer, CultureInfo.CurrentCulture, out result)) {
+                    if (!Int32.TryParse(attribute.ConstructorArguments[1].Value.ToString(), NumberStyles.Integer, CultureInfo.CurrentCulture, out var result)) {
                         return null;
                     }
 
@@ -187,14 +186,12 @@ namespace Squirrel
             const string neutral = "000004B0";
             var supportedLanguageCodes = new[] { englishUS, neutral };
 
-            IntPtr result;
-            int resultSize;
             if (!supportedLanguageCodes.Any(
                 languageCode =>
                     NativeMethods.VerQueryValue(
                         buf,
                         $"\\StringFileInfo\\{languageCode}\\SquirrelAwareVersion",
-                        out result, out resultSize
+                        out var result, out var resultSize
                     )
             )) {
                 return null;
