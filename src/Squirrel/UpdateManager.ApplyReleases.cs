@@ -422,7 +422,16 @@ namespace Squirrel
                 // For each app, run the install command in-order and wait
                 if (!firstRunOnly) await squirrelApps.ForEachAsync(async exe => {
                     using (var cts = new CancellationTokenSource()) {
-                        cts.CancelAfter(30 * 1000);
+                        // if silent install, allow more time
+                        // to ensure all parts are being configured
+                        // this is likely being installed at startup
+                        // which we could have contention with other processes on start
+                        if (silentInstall) {
+                            cts.CancelAfter(120 * 1000);
+                        }
+                        else {
+                            cts.CancelAfter(60 * 1000);
+                        }
 
                         try {
                             await Utility.InvokeProcessAsync(exe, args, cts.Token);
@@ -616,7 +625,7 @@ namespace Squirrel
                             // For each app, run the install command in-order and wait
                             await squirrelApps.ForEachAsync(async exe => {
                                 using (var cts = new CancellationTokenSource()) {
-                                    cts.CancelAfter(20 * 1000);
+                                    cts.CancelAfter(30 * 1000);
 
                                     try {
                                         await Utility.InvokeProcessAsync(exe, args, cts.Token);
