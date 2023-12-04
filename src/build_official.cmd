@@ -40,8 +40,10 @@ nuget pack Squirrel.nuspec -OutputDirectory ..\build\artifacts || exit /b
 
 md ..\build\artifacts\electron-winstaller\vendor
 
-copy ..\build\Release\net462\Update462.exe ..\build\artifacts\electron-winstaller\vendor\Squirrel.exe || exit /b
-copy ..\build\Release\net462\Update462.pdb ..\build\artifacts\electron-winstaller\vendor\Squirrel.pdb || exit /b
+:: electron-builder expects the normally renamed Squirrel.exe to be Update.exe in it's project
+:: we'll rename all to Update.exe along with the .pdb
+copy ..\build\Release\net462\Update462.exe ..\build\artifacts\electron-winstaller\vendor\Update.exe || exit /b
+copy ..\build\Release\net462\Update462.pdb ..\build\artifacts\electron-winstaller\vendor\Update.pdb || exit /b
 copy ..\build\Release\net462\Update.com ..\build\artifacts\electron-winstaller\vendor\Update.com || exit /b
 copy ..\build\Release\Win32\Setup.exe ..\build\artifacts\electron-winstaller\vendor || exit /b
 copy ..\build\Release\Win32\Setup.pdb ..\build\artifacts\electron-winstaller\vendor || exit /b
